@@ -12,6 +12,7 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body class="bg-gray-50 text-gray-800 flex h-screen overflow-hidden">
 
@@ -219,17 +220,31 @@
         </div>
     </div>
 
-    <!-- Modal Quét QR Kiểm Tra -->
-    <div id="scanModal" class="fixed inset-0 bg-black/60 z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm text-center">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
+    <!-- Modal Quét QR Kiểm Tra (Camera + Nhập tay) -->
+    <div id="scanModal" class="fixed inset-0 bg-black/80 z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-3 border-b pb-2 shrink-0">
                 <h4 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-qrcode text-purple-600 mr-2"></i>Quét mã kiểm tra</h4>
-                <button onclick="app.closeScanModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <button onclick="app.closeScanModal()" class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-xs text-gray-500 mb-4">Dùng máy quét QR quét mã trên túi. Hệ thống sẽ kiểm tra xem có đúng môn học hôm nay không.</p>
-            <input type="text" id="scanInput" class="w-full border-2 border-purple-300 rounded-lg px-4 py-3 outline-none focus:border-purple-500 font-mono text-center text-lg mb-4" placeholder="Đang chờ quét mã..." autocomplete="off">
-            <div id="scanResult" class="min-h-[70px] text-sm font-medium p-3 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center">
-                Kết quả sẽ hiển thị ở đây
+            
+            <div class="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                <!-- Khu vực quét Camera -->
+                <div id="reader-container" class="rounded-lg overflow-hidden border-2 border-purple-200 bg-gray-100 relative">
+                    <div id="reader" style="width: 100%;"></div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <hr class="flex-1 border-gray-200">
+                    <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">HOẶC DÙNG MÁY QUÉT USB / NHẬP TAY</span>
+                    <hr class="flex-1 border-gray-200">
+                </div>
+
+                <input type="text" id="scanInput" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-purple-500 font-mono text-center text-lg uppercase shadow-inner" placeholder="Nhập / Quét mã..." autocomplete="off">
+                
+                <div id="scanResult" class="min-h-[80px] text-sm font-medium p-4 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center transition-all duration-300">
+                    Chờ quét mã...
+                </div>
             </div>
         </div>
     </div>
@@ -716,34 +731,84 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 this.closeWeekModal();
             }
 
-            // --- XỬ LÝ QUÉT MÃ KIỂM TRA HÔM NAY ---
+            // --- XỬ LÝ QUÉT MÃ (CAMERA + NHẬP TAY) ---
             openScanModal() {
-                document.getElementById('scanResult').className = "min-h-[70px] text-sm font-medium p-3 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center";
-                document.getElementById('scanResult').innerHTML = "Kết quả sẽ hiển thị ở đây";
+                const resultBox = document.getElementById('scanResult');
+                resultBox.className = "min-h-[80px] text-sm font-medium p-4 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center";
+                resultBox.innerHTML = "Chờ quét mã...";
+                
                 const input = document.getElementById('scanInput');
                 input.value = '';
                 document.getElementById('scanModal').classList.remove('hidden');
                 setTimeout(() => input.focus(), 100);
+
+                // Khởi tạo HTML5 QRCode
+                if (this.html5QrcodeScanner) {
+                    this.html5QrcodeScanner.clear();
+                }
+                
+                this.html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader",
+                    { 
+                        fps: 10, 
+                        qrbox: {width: 250, height: 250},
+                        aspectRatio: 1.0,
+                        showTorchButtonIfSupported: true
+                    },
+                    /* verbose= */ false
+                );
+
+                this.html5QrcodeScanner.render((decodedText) => {
+                    // Thành công khi quét qua Camera
+                    this.checkBagForToday(decodedText);
+                    // Tạm dừng quét 2 giây để người dùng đọc kết quả
+                    this.html5QrcodeScanner.pause(true);
+                    setTimeout(() => {
+                        this.html5QrcodeScanner.resume();
+                        document.getElementById('scanResult').innerHTML = "Tiếp tục đưa mã vào khung camera...";
+                        document.getElementById('scanResult').className = "min-h-[80px] text-sm font-medium p-4 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center";
+                    }, 2500);
+                }, (error) => {
+                    // Lỗi đọc liên tục (bỏ qua để không spam console)
+                });
             }
 
             closeScanModal() {
                 document.getElementById('scanModal').classList.add('hidden');
+                // Tắt camera khi đóng modal
+                if (this.html5QrcodeScanner) {
+                    this.html5QrcodeScanner.clear().catch(e => console.error("Lỗi tắt camera:", e));
+                    this.html5QrcodeScanner = null;
+                }
             }
 
             checkBagForToday(bagCode) {
-                const bag = this.bags.find(b => b.code.toUpperCase() === bagCode.toUpperCase());
+                const cleanCode = bagCode.trim().toUpperCase();
+                if (!cleanCode) return;
+
+                const bag = this.bags.find(b => b.code.toUpperCase() === cleanCode);
                 const resultBox = document.getElementById('scanResult');
                 document.getElementById('scanInput').value = ''; 
                 
+                // Kêu bíp nhẹ nếu trình duyệt hỗ trợ
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    osc.connect(ctx.destination);
+                    osc.frequency.value = 1200;
+                    osc.start();
+                    setTimeout(() => osc.stop(), 100);
+                } catch(e) {}
+
                 if (!bag) {
-                    resultBox.className = "min-h-[70px] text-sm font-bold p-3 rounded-lg bg-red-100 text-red-700 border border-red-200 flex items-center justify-center";
-                    resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-2 text-lg"></i> Không tìm thấy túi: ${bagCode}`;
+                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-red-100 text-red-700 border border-red-300 flex flex-col items-center justify-center text-center shadow-inner";
+                    resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mb-1 text-2xl"></i> Không tìm thấy mã:<br><span class="font-mono text-lg mt-1">${cleanCode}</span>`;
                     return;
                 }
 
                 if (bag.type === 'tai_lieu') {
-                    resultBox.className = "min-h-[70px] text-sm font-bold p-3 rounded-lg bg-blue-100 text-blue-700 border border-blue-200 flex flex-col items-center justify-center text-center";
-                    resultBox.innerHTML = `<i class="fa-solid fa-info-circle mb-1 text-lg"></i> Đây là tài liệu chung:<br>${bag.name}`;
+                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
+                    resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU CHUNG<br><span class="text-base mt-1">${bag.name}</span>`;
                     return;
                 }
 
@@ -754,6 +819,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 if (bag.schedules && bag.schedules.length > 0) {
                     for(let sch of bag.schedules) {
                         const validWeeks = this.parseWeeks(sch.weeks);
+                        // Chỉ kiểm tra đúng Ngày và nằm trong Tuần quy định (bỏ qua kiểm tra giờ giấc để nới lỏng)
                         if (sch.day === currentDay && validWeeks.includes(currentWeek)) {
                             isCorrectForToday = true;
                             break;
@@ -762,11 +828,11 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 }
 
                 if (isCorrectForToday) {
-                    resultBox.className = "min-h-[70px] text-sm font-bold p-3 rounded-lg bg-green-100 text-green-700 border border-green-200 flex flex-col items-center justify-center text-center";
-                    resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-xl mb-1"></i> ĐÚNG MÔN HỌC HÔM NAY<br>${bag.name} (${bag.subjectCode})`;
+                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-green-100 text-green-800 border border-green-400 flex flex-col items-center justify-center text-center shadow-inner scale-105 transition-transform";
+                    resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${bag.name} (${bag.subjectCode})</span>`;
                 } else {
-                    resultBox.className = "min-h-[70px] text-sm font-bold p-3 rounded-lg bg-orange-100 text-orange-700 border border-orange-200 flex flex-col items-center justify-center text-center";
-                    resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-xl mb-1"></i> SAI LỊCH!<br>${bag.name} không có lịch vào ${currentDay} (Tuần ${currentWeek}).`;
+                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-400 flex flex-col items-center justify-center text-center shadow-inner";
+                    resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Môn này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${bag.name}`;
                 }
             }
 
