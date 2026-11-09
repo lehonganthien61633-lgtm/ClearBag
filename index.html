@@ -589,15 +589,25 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const currentSemester = document.getElementById('semester').value;
                 document.getElementById('weekModalSemester').innerText = `HK: ${currentSemester || 'N/A'}`;
 
-                // Tính tuần ISO hiện tại làm mốc
-                const currentDate = new Date();
-                const currentYearStart = new Date(currentDate.getFullYear(), 0, 1);
-                const days = Math.floor((currentDate - currentYearStart) / (24 * 60 * 60 * 1000));
-                const currentISOWeek = Math.ceil((currentDate.getDay() + 1 + days) / 7);
+                // Thuật toán tính tuần ISO 8601 chính xác
+                const getISOWeek = (date) => {
+                    const target = new Date(date.valueOf());
+                    const dayNr = (date.getDay() + 6) % 7;
+                    target.setDate(target.getDate() - dayNr + 3);
+                    const firstThursday = target.valueOf();
+                    target.setMonth(0, 1);
+                    if (target.getDay() !== 4) {
+                        target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+                    }
+                    return 1 + Math.ceil((firstThursday - target) / 604800000);
+                };
 
-                // Hiển thị 20 tuần gần nhất xung quanh tuần hiện tại (ví dụ: từ tuần hiện tại lùi lại 5, tiến tới 15)
-                const startWeek = Math.max(1, currentISOWeek - 5);
-                const endWeek = startWeek + 19;
+                const currentISOWeek = getISOWeek(new Date());
+
+                // Hiển thị 20 tuần gần nhất, lùi lại 3 tuần so với tuần hiện tại
+                const startWeek = Math.max(1, currentISOWeek - 3);
+                // Giới hạn không vượt quá 52 tuần của một năm
+                const endWeek = Math.min(52, startWeek + 19);
 
                 const grid = document.getElementById('weekGrid');
                 let html = '';
@@ -672,24 +682,28 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const now = new Date();
                 const timeStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
+                // Tính toán chiều rộng an toàn (trừ hao 2mm để chống lẹm lề máy in nhiệt)
+                const safeW = parseInt(w) - 2;
+                const safeH = parseInt(h) - 2;
+
                 let content = '';
                 if (bag.type === 'tai_lieu') {
-                    // Thu nhỏ cho Tài Liệu
+                    // Thu nhỏ cho Tài Liệu, cho phép xuống dòng
                     content = `
                         <div style="font-weight:bold; font-size:9pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:8pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Tên:</b> ${bag.name}</div>
-                        <div style="font-size:8pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
-                        <div style="font-size:6pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
+                        <div style="font-size:7pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.15; flex-grow: 1; word-break: break-word; white-space: normal;"><b>Tên:</b> ${bag.name}</div>
+                        <div style="font-size:7.5pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace; font-weight:bold;">${bag.code}</span></div>
+                        <div style="font-size:5.5pt; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
                     `;
                 } else {
-                    // Thu nhỏ cho Môn Học
+                    // Thu nhỏ cho Môn Học, cho phép xuống dòng
                     let schStr = (bag.schedules || []).map(s => `${s.day} (${s.start.replace(':00', 'h')})`).join(', ');
                     content = `
                         <div style="font-weight:bold; font-size:9pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">BÌA TÀI LIỆU</div>
-                        <div style="font-size:8pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>MH:</b> ${bag.name}</div>
-                        <div style="font-size:8pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
-                        <div style="font-size:7pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>Lịch:</b> ${schStr}</div>
-                        <div style="font-size:6pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 0.5mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
+                        <div style="font-size:7pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.15; max-height: 3.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word; white-space: normal;"><b>MH:</b> ${bag.name}</div>
+                        <div style="font-size:7.5pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace; font-weight:bold;">${bag.code}</span></div>
+                        <div style="font-size:6.5pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; white-space: normal;"><b>Lịch:</b> ${schStr}</div>
+                        <div style="font-size:5.5pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 0.5mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
                     `;
                 }
 
@@ -699,28 +713,21 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     <html><head>
                     <title>In Nhãn - ${bag.code}</title>
                     <style>
-                        /* Cấu hình cực kỳ ép sát cho máy in tem */
+                        /* Reset hoàn toàn margin/padding của trình duyệt */
                         @page { size: ${w}mm ${h}mm landscape; margin: 0 !important; }
-                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
+                        html, body { margin: 0; padding: 0; width: ${w}mm; height: ${h}mm; background: #fff; overflow: hidden; display: flex; justify-content: center; align-items: center; }
                         
-                        /* Frame nhãn in */
+                        /* Frame nhãn in nhỏ hơn khổ giấy thực tế để chống lẹm */
                         .label-container {
-                            width: ${w}mm; 
-                            height: ${h}mm; 
+                            width: ${safeW}mm; 
+                            height: ${safeH}mm; 
                             box-sizing: border-box; 
-                            padding: 1.5mm 2mm; /* Viền trong rất nhỏ */
+                            padding: 1mm 1.5mm;
                             font-family: 'Arial', sans-serif; 
                             display: flex; 
                             flex-direction: column; 
                             -webkit-print-color-adjust: exact; 
                             print-color-adjust: exact;
-                        }
-                        
-                        /* Cắt chữ dài nếu có */
-                        .label-container div {
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            white-space: nowrap;
                         }
                     </style>
                     </head><body>
