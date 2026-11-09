@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Clearbag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="bg-slate-800 text-white w-64 flex flex-col hidden md:flex">
+        <div class="p-5 border-b border-slate-700 text-xl font-bold flex items-center gap-2">
+            <i class="fa-regular fa-folder-open text-blue-400"></i> Kho Clearbag
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="app.switchView('dashboard')" class="w-full text-left px-4 py-3 rounded bg-blue-600 hover:bg-blue-500"><i class="fa-solid fa-chart-pie w-6"></i> Tổng quan</button>
+            <button onclick="app.switchView('clearbags')" class="w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white"><i class="fa-solid fa-box w-6"></i> Clearbag</button>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center z-10">
+            <h2 id="pageTitle" class="text-xl font-bold">Tổng quan</h2>
+            <button onclick="app.openModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                <i class="fa-solid fa-plus"></i> Thêm Túi Mới
+            </button>
+        </header>
+
+        <div class="p-6 overflow-y-auto flex-1">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                        <p class="text-gray-500 text-sm">Tổng số lượng túi</p>
+                        <p id="stat-total" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                        <p class="text-gray-500 text-sm">Tổng giá trị</p>
+                        <p id="stat-value" class="text-3xl font-bold">0 ₫</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clearbags View -->
+            <div id="view-clearbags" class="hidden bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-4 border-b border-gray-200">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm tên, mã túi..." class="w-full md:w-1/3 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 text-gray-500 text-sm">
+                        <tr>
+                            <th class="px-6 py-3 font-medium">Mã</th>
+                            <th class="px-6 py-3 font-medium">Tên Túi Clearbag</th>
+                            <th class="px-6 py-3 font-medium text-right">Số lượng</th>
+                            <th class="px-6 py-3 font-medium text-right">Đơn giá</th>
+                            <th class="px-6 py-3 font-medium text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal Form -->
+    <div id="modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 class="text-lg font-bold mb-4" id="modalTitle">Thêm Clearbag</h3>
+            <form id="bagForm" class="space-y-4" onsubmit="return false;">
+                <input type="hidden" id="bagId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Mã Túi (Tự tạo nếu để trống)</label>
+                    <input type="text" id="bagCode" class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500 uppercase">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tên Clearbag *</label>
+                    <input type="text" id="bagName" required class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Số lượng</label>
+                        <input type="number" id="bagQty" required min="0" value="1" class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Đơn giá (VNĐ)</label>
+                        <input type="number" id="bagPrice" required min="0" value="0" class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-200 rounded">Hủy</button>
+                    <button type="button" onclick="app.saveData()" class="px-4 py-2 bg-blue-600 text-white rounded">Lưu lại</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        class ClearbagApp {
+            constructor() {
+                this.bags = [];
+                this.search = '';
+                
+                // Cấu hình Database theo yêu cầu
+                const firebaseConfig = { 
+                    databaseURL: "https://clearbag-188b6-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+                };
+                const fbApp = initializeApp(firebaseConfig);
+                this.db = getDatabase(fbApp);
+                this.bagsRef = ref(this.db, 'clearbags');
+
+                this.init();
+            }
+
+            init() {
+                onValue(this.bagsRef, (snapshot) => {
+                    this.bags = [];
+                    if (snapshot.exists()) {
+                        snapshot.forEach((child) => {
+                            this.bags.push({ id: child.key, ...child.val() });
+                        });
+                    }
+                    this.render();
+                });
+
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.search = e.target.value.toLowerCase();
+                    this.render();
+                });
+            }
+
+            switchView(view) {
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-clearbags').classList.add('hidden');
+                document.getElementById(`view-${view}`).classList.remove('hidden');
+                document.getElementById('pageTitle').innerText = view === 'dashboard' ? 'Tổng quan' : 'Danh sách Clearbag';
+            }
+
+            render() {
+                let totalQty = 0, totalVal = 0;
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
+
+                this.bags.forEach(bag => {
+                    totalQty += parseInt(bag.qty || 0);
+                    totalVal += (parseInt(bag.qty || 0) * parseInt(bag.price || 0));
+
+                    if (bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search)) {
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-gray-50 border-b">
+                                <td class="px-6 py-3 font-semibold text-blue-600">${bag.code}</td>
+                                <td class="px-6 py-3">${bag.name}</td>
+                                <td class="px-6 py-3 text-right font-bold">${bag.qty}</td>
+                                <td class="px-6 py-3 text-right">${new Intl.NumberFormat('vi-VN').format(bag.price)} ₫</td>
+                                <td class="px-6 py-3 text-center">
+                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-2"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                document.getElementById('stat-total').innerText = totalQty;
+                document.getElementById('stat-value').innerText = new Intl.NumberFormat('vi-VN').format(totalVal) + ' ₫';
+            }
+
+            openModal() {
+                document.getElementById('bagForm').reset();
+                document.getElementById('bagId').value = '';
+                document.getElementById('modalTitle').innerText = 'Thêm Clearbag';
+                document.getElementById('modal').classList.remove('hidden');
+            }
+
+            closeModal() {
+                document.getElementById('modal').classList.add('hidden');
+            }
+
+            editBag(id) {
+                const bag = this.bags.find(b => b.id === id);
+                if(bag) {
+                    document.getElementById('bagId').value = bag.id;
+                    document.getElementById('bagCode').value = bag.code;
+                    document.getElementById('bagName').value = bag.name;
+                    document.getElementById('bagQty').value = bag.qty;
+                    document.getElementById('bagPrice').value = bag.price;
+                    document.getElementById('modalTitle').innerText = 'Cập nhật Clearbag';
+                    document.getElementById('modal').classList.remove('hidden');
+                }
+            }
+
+            async saveData() {
+                const idInput = document.getElementById('bagId').value;
+                const codeInput = document.getElementById('bagCode').value.trim() || 'CB-' + Math.floor(Math.random() * 10000);
+                const nameInput = document.getElementById('bagName').value.trim();
+                const qtyInput = document.getElementById('bagQty').value;
+                const priceInput = document.getElementById('bagPrice').value;
+
+                if(!nameInput) return alert("Vui lòng nhập tên túi!");
+
+                const key = idInput || codeInput.toUpperCase();
+                
+                await set(ref(this.db, 'clearbags/' + key), {
+                    code: codeInput.toUpperCase(),
+                    name: nameInput,
+                    qty: parseInt(qtyInput),
+                    price: parseInt(priceInput)
+                });
+
+                this.closeModal();
+            }
+
+            async deleteBag(id) {
+                if(confirm('Bạn có chắc muốn xóa túi này?')) {
+                    await remove(ref(this.db, 'clearbags/' + id));
+                }
+            }
+        }
+
+        window.app = new ClearbagApp();
+    </script>
+</body>
+</html>
