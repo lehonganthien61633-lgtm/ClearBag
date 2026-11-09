@@ -72,48 +72,50 @@
             </div>
 
             <!-- Clearbags View -->
-            <div id="view-clearbags" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div id="view-clearbags" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-col h-full">
                 <div class="p-4 border-b border-gray-200 bg-gray-50 flex gap-2">
-                    <div class="relative w-full md:w-1/3">
+                    <div class="relative w-full md:w-1/3 shrink-0">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                        <input type="text" id="searchInput" placeholder="Tìm kiếm tên, mã túi..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                        <input type="text" id="searchInput" placeholder="Tìm tên, mã túi..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left min-w-[800px]">
-                        <thead class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                <!-- Sửa overflow-auto để cuộn bảng mượt trên mobile -->
+                <div class="overflow-auto flex-1">
+                    <table class="w-full text-left whitespace-nowrap md:whitespace-normal">
+                        <thead class="bg-gray-100 text-gray-600 text-xs md:text-sm uppercase tracking-wider sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="px-6 py-3 font-medium">Mã</th>
-                                <th class="px-6 py-3 font-medium">Phân loại</th>
-                                <th class="px-6 py-3 font-medium">Tên Clearbag</th>
-                                <th class="px-6 py-3 font-medium">Thông tin Môn học</th>
-                                <th class="px-6 py-3 font-medium text-center">Thao tác</th>
+                                <th class="px-4 md:px-6 py-3 font-medium">Mã</th>
+                                <th class="px-4 md:px-6 py-3 font-medium">Loại</th>
+                                <th class="px-4 md:px-6 py-3 font-medium">Tên túi</th>
+                                <th class="px-4 md:px-6 py-3 font-medium hidden sm:table-cell">Thông tin Môn học</th>
+                                <th class="px-4 md:px-6 py-3 font-medium text-center">Thao tác</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody" class="divide-y divide-gray-100 bg-white"></tbody>
+                        <tbody id="tableBody" class="divide-y divide-gray-100 bg-white text-sm"></tbody>
                     </table>
                 </div>
             </div>
 
             <!-- Subjects View (Read-only) -->
-            <div id="view-subjects" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="p-4 border-b border-gray-200 flex flex-wrap gap-4 items-center bg-gray-50">
-                    <label class="font-bold text-gray-700">Chọn Học Kỳ:</label>
-                    <select id="filterSemester" onchange="app.renderSubjects()" class="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700 min-w-[150px] shadow-sm">
+            <div id="view-subjects" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-col h-full">
+                <div class="p-4 border-b border-gray-200 flex flex-wrap gap-2 md:gap-4 items-center bg-gray-50 shrink-0">
+                    <label class="font-bold text-gray-700 text-sm md:text-base">Học Kỳ:</label>
+                    <select id="filterSemester" onchange="app.renderSubjects()" class="px-3 md:px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700 min-w-[120px] shadow-sm text-sm">
                         <!-- Rendered by JS -->
                     </select>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left min-w-[700px]">
-                        <thead class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                <!-- Sửa overflow-auto để cuộn bảng mượt trên mobile -->
+                <div class="overflow-auto flex-1">
+                    <table class="w-full text-left whitespace-nowrap md:whitespace-normal">
+                        <thead class="bg-gray-100 text-gray-600 text-xs md:text-sm uppercase tracking-wider sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="px-6 py-3 font-medium">Mã MH</th>
-                                <th class="px-6 py-3 font-medium">Tên Môn Học (Clearbag)</th>
-                                <th class="px-6 py-3 font-medium">Lịch học</th>
-                                <th class="px-6 py-3 font-medium text-center">Học kỳ</th>
+                                <th class="px-4 md:px-6 py-3 font-medium">Mã MH</th>
+                                <th class="px-4 md:px-6 py-3 font-medium">Tên Môn Học</th>
+                                <th class="px-4 md:px-6 py-3 font-medium hidden sm:table-cell">Lịch học</th>
+                                <th class="px-4 md:px-6 py-3 font-medium text-center">HK</th>
                             </tr>
                         </thead>
-                        <tbody id="subjectsTableBody" class="divide-y divide-gray-100 bg-white"></tbody>
+                        <tbody id="subjectsTableBody" class="divide-y divide-gray-100 bg-white text-sm"></tbody>
                     </table>
                 </div>
             </div>
@@ -220,29 +222,23 @@
         </div>
     </div>
 
-    <!-- Modal Quét QR Kiểm Tra (Camera + Nhập tay) -->
-    <div id="scanModal" class="fixed inset-0 bg-black/80 z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md flex flex-col max-h-[90vh]">
+    <!-- Modal Quét QR Kiểm Tra (Chỉ Camera) -->
+    <div id="scanModal" class="fixed inset-0 bg-black/80 z-[70] hidden flex items-center justify-center p-3 md:p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-4 md:p-5 w-full max-w-sm flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-3 border-b pb-2 shrink-0">
-                <h4 class="font-bold text-lg text-gray-800"><i class="fa-solid fa-qrcode text-purple-600 mr-2"></i>Quét mã kiểm tra</h4>
+                <h4 class="font-bold text-base md:text-lg text-gray-800"><i class="fa-solid fa-qrcode text-purple-600 mr-2"></i>Quét QR Clearbag</h4>
                 <button onclick="app.closeScanModal()" class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="flex-1 overflow-y-auto no-scrollbar space-y-4">
-                <!-- Khu vực quét Camera -->
-                <div id="reader-container" class="rounded-lg overflow-hidden border-2 border-purple-200 bg-black relative flex items-center justify-center min-h-[250px]">
+            <div class="flex-1 space-y-3 overflow-y-auto no-scrollbar pb-2">
+                <p class="text-xs text-center text-gray-500">Đưa mã QR trên túi vào giữa khung hình.</p>
+                
+                <!-- Khu vực quét Camera tự co giãn trên mobile -->
+                <div id="reader-container" class="rounded-lg overflow-hidden border-2 border-purple-200 bg-black relative flex items-center justify-center min-h-[250px] md:min-h-[300px]">
                     <div id="reader" style="width: 100%; border: none;"></div>
                 </div>
 
-                <div class="flex items-center gap-2">
-                    <hr class="flex-1 border-gray-200">
-                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Hoặc nhập tay</span>
-                    <hr class="flex-1 border-gray-200">
-                </div>
-
-                <input type="text" id="scanInput" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-purple-500 font-mono text-center text-lg uppercase shadow-inner" placeholder="Nhập mã túi..." autocomplete="off">
-                
-                <div id="scanResult" class="min-h-[90px] text-sm font-medium p-4 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center transition-all duration-300">
+                <div id="scanResult" class="min-h-[70px] md:min-h-[90px] text-xs md:text-sm font-medium p-3 md:p-4 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center transition-all duration-300">
                     Chờ quét mã...
                 </div>
             </div>
@@ -309,14 +305,8 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     val = val.replace(/[^A-Za-z0-9]/g, '');
                     e.target.value = val.toUpperCase().substring(0, 6);
                 });
-
-                // Sự kiện cho máy quét mã vạch
-                document.getElementById('scanInput').addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        const code = e.target.value.trim();
-                        if(code) this.checkBagForToday(code);
-                    }
-                });
+                
+                // Đã XÓA phần document.getElementById('scanInput').addEventListener...
             }
 
             // --- CÁC HÀM TIỆN ÍCH DÙNG CHUNG ---
@@ -431,19 +421,19 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 this.bags.forEach(bag => {
                     totalBags++;
                     if (bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search)) {
-                        const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Tài liệu</span>';
+                        const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Tài liệu</span>';
                         
                         let extraInfo = '';
                         if (bag.type === 'mon_hoc') {
                             let scheduleHtml = '';
                             if(bag.schedules && Array.isArray(bag.schedules)) {
                                 scheduleHtml = bag.schedules.map(s => {
-                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">Tuần: ${s.weeks}</span>` : '';
-                                    return `<div class="mt-0.5 flex items-center"><i class="fa-regular fa-clock w-3 mr-1"></i> ${s.day}, ${s.start} - ${s.end} ${wInfo}</div>`;
+                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">T:${s.weeks}</span>` : '';
+                                    return `<div class="mt-0.5 flex items-center whitespace-nowrap"><i class="fa-regular fa-clock w-3 mr-1"></i> ${s.day}, ${s.start}-${s.end} ${wInfo}</div>`;
                                 }).join('');
                             }
                             extraInfo = `
-                                <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
                                     <span class="font-bold text-gray-800">${bag.subjectCode}</span> (HK: ${bag.semester})<br>
                                     ${scheduleHtml}
                                 </div>
@@ -452,14 +442,14 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                         tbody.innerHTML += `
                             <tr class="hover:bg-gray-50 border-b">
-                                <td class="px-6 py-4 font-semibold text-blue-600 align-top">${bag.code}</td>
-                                <td class="px-6 py-4 align-top whitespace-nowrap">${typeLabel}</td>
-                                <td class="px-6 py-4 align-top font-medium text-gray-800">${bag.name}</td>
-                                <td class="px-6 py-4 align-top min-w-[200px]">${extraInfo}</td>
-                                <td class="px-6 py-4 text-center align-top whitespace-nowrap">
-                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 px-2 py-1 rounded mx-1" title="In nhãn"><i class="fa-solid fa-print"></i></button>
-                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-1" title="Sửa"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 mx-1" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                <td class="px-4 md:px-6 py-3 font-semibold text-blue-600 align-top">${bag.code}</td>
+                                <td class="px-4 md:px-6 py-3 align-top">${typeLabel}</td>
+                                <td class="px-4 md:px-6 py-3 align-top font-medium text-gray-800 truncate max-w-[150px] md:max-w-none" title="${bag.name}">${bag.name}</td>
+                                <td class="px-4 md:px-6 py-3 align-top min-w-[200px] hidden sm:table-cell">${extraInfo}</td>
+                                <td class="px-4 md:px-6 py-3 text-center align-top whitespace-nowrap">
+                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 p-1.5 md:px-2 md:py-1 rounded mx-0.5" title="In nhãn"><i class="fa-solid fa-print"></i></button>
+                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-0.5 md:mx-1 p-1.5" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 mx-0.5 md:mx-1 p-1.5" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                 </td>
                             </tr>
                         `;
@@ -507,7 +497,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     let scheduleHtml = '';
                     if(bag.schedules && Array.isArray(bag.schedules)) {
                         scheduleHtml = bag.schedules.map(s => 
-                            `<span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded mr-1 mb-1 border border-blue-100 font-medium">
+                            `<span class="inline-block bg-blue-50 text-blue-700 text-[10px] md:text-xs px-2 py-1 rounded mr-1 mb-1 border border-blue-100 font-medium">
                                 ${s.day}, ${s.start} - ${s.end}
                             </span>`
                         ).join('');
@@ -515,10 +505,10 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                     return `
                         <tr class="hover:bg-gray-50 border-b transition-colors">
-                            <td class="px-6 py-4 font-bold text-gray-800">${bag.subjectCode || 'N/A'}</td>
-                            <td class="px-6 py-4 text-gray-700 font-medium">${bag.name}</td>
-                            <td class="px-6 py-4">${scheduleHtml}</td>
-                            <td class="px-6 py-4 text-center font-bold text-blue-600 bg-gray-50/50">${bag.semester || 'N/A'}</td>
+                            <td class="px-4 md:px-6 py-3 font-bold text-gray-800">${bag.subjectCode || 'N/A'}</td>
+                            <td class="px-4 md:px-6 py-3 text-gray-700 font-medium truncate max-w-[150px] md:max-w-none" title="${bag.name}">${bag.name}</td>
+                            <td class="px-4 md:px-6 py-3 hidden sm:table-cell">${scheduleHtml}</td>
+                            <td class="px-4 md:px-6 py-3 text-center font-bold text-blue-600 bg-gray-50/50">${bag.semester || 'N/A'}</td>
                         </tr>
                     `;
                 }).join('');
