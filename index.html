@@ -586,24 +586,32 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const sch = this.currentSchedules[idx];
                 const selectedWeeks = sch.weeks ? sch.weeks.split(',').map(Number) : [];
                 
-                // Lấy học kỳ hiện tại trên form để hiển thị cảnh báo/gợi ý
                 const currentSemester = document.getElementById('semester').value;
                 document.getElementById('weekModalSemester').innerText = `HK: ${currentSemester || 'N/A'}`;
 
+                // Tính tuần ISO hiện tại làm mốc
+                const currentDate = new Date();
+                const currentYearStart = new Date(currentDate.getFullYear(), 0, 1);
+                const days = Math.floor((currentDate - currentYearStart) / (24 * 60 * 60 * 1000));
+                const currentISOWeek = Math.ceil((currentDate.getDay() + 1 + days) / 7);
+
+                // Hiển thị 20 tuần gần nhất xung quanh tuần hiện tại (ví dụ: từ tuần hiện tại lùi lại 5, tiến tới 15)
+                const startWeek = Math.max(1, currentISOWeek - 5);
+                const endWeek = startWeek + 19;
+
                 const grid = document.getElementById('weekGrid');
                 let html = '';
-                // 1 Học kỳ Đại học thường tối đa 20 tuần
-                for(let i=1; i<=20; i++) {
+                for(let i = startWeek; i <= endWeek; i++) {
                     const checked = selectedWeeks.includes(i) ? 'checked' : '';
+                    const isCurrent = i === currentISOWeek ? 'ring-2 ring-red-400' : '';
                     html += `
-                        <label class="flex flex-col items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors ${checked ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}">
+                        <label class="flex flex-col items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors ${checked ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'} ${isCurrent}" title="${i === currentISOWeek ? 'Tuần hiện tại' : ''}">
                             <input type="checkbox" value="${i}" class="week-cb w-4 h-4 text-blue-600 rounded mb-1" ${checked}>
                             <span class="text-xs font-medium text-gray-700">T${i}</span>
                         </label>`;
                 }
                 grid.innerHTML = html;
                 
-                // Cập nhật giao diện khi click
                 document.querySelectorAll('.week-cb').forEach(cb => {
                     cb.addEventListener('change', (e) => {
                         const label = e.target.closest('label');
@@ -619,10 +627,26 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                 document.getElementById('weekModal').classList.remove('hidden');
             }
+
+            closeWeekModal() {
+                document.getElementById('weekModal').classList.add('hidden');
+                this.currentScheduleIndex = null;
+            }
+
             saveWeeks() {
+                // Khắc phục lỗi đơ: Kiểm tra tồn tại Index
+                if (this.currentScheduleIndex === null || this.currentScheduleIndex === undefined) {
+                    this.closeWeekModal();
+                    return;
+                }
                 const cbs = document.querySelectorAll('.week-cb:checked');
                 const weeks = Array.from(cbs).map(cb => cb.value).join(',');
-                this.currentSchedules[this.currentScheduleIndex].weeks = weeks;
+                
+                // Cập nhật lại array
+                if (this.currentSchedules[this.currentScheduleIndex]) {
+                    this.currentSchedules[this.currentScheduleIndex].weeks = weeks;
+                }
+                
                 this.renderScheduleUI();
                 this.closeWeekModal();
             }
@@ -646,24 +670,26 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 if(!bag) return;
 
                 const now = new Date();
-                const timeStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                const timeStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
                 let content = '';
                 if (bag.type === 'tai_lieu') {
+                    // Thu nhỏ cho Tài Liệu
                     content = `
-                        <div style="font-weight:bold; font-size:12pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #333; padding-bottom: 1.5mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:10pt; margin-bottom: 2mm; padding: 0 1mm;"><b>Tên:</b> ${bag.name}</div>
-                        <div style="font-size:10pt; margin-bottom: 2mm; padding: 0 1mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
-                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In lúc: ${timeStr}</div>
+                        <div style="font-weight:bold; font-size:9pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
+                        <div style="font-size:8pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Tên:</b> ${bag.name}</div>
+                        <div style="font-size:8pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div style="font-size:6pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
                     `;
                 } else {
-                    let schStr = (bag.schedules || []).map(s => `${s.day} (${s.start}-${s.end})`).join(', ');
+                    // Thu nhỏ cho Môn Học
+                    let schStr = (bag.schedules || []).map(s => `${s.day} (${s.start.replace(':00', 'h')})`).join(', ');
                     content = `
-                        <div style="font-weight:bold; font-size:12pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #333; padding-bottom: 1.5mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:10pt; margin-bottom: 1.5mm; padding: 0 1mm;"><b>Tên MH:</b> ${bag.name}</div>
-                        <div style="font-size:10pt; margin-bottom: 1.5mm; padding: 0 1mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
-                        <div style="font-size:8pt; margin-bottom: 1.5mm; padding: 0 1mm;"><b>Lịch học:</b> ${schStr}</div>
-                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In lúc: ${timeStr}</div>
+                        <div style="font-weight:bold; font-size:9pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">BÌA TÀI LIỆU</div>
+                        <div style="font-size:8pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>MH:</b> ${bag.name}</div>
+                        <div style="font-size:8pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div style="font-size:7pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>Lịch:</b> ${schStr}</div>
+                        <div style="font-size:6pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 0.5mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
                     `;
                 }
 
@@ -673,23 +699,28 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     <html><head>
                     <title>In Nhãn - ${bag.code}</title>
                     <style>
-                        /* Reset hoàn toàn margin/padding của trình duyệt */
+                        /* Cấu hình cực kỳ ép sát cho máy in tem */
                         @page { size: ${w}mm ${h}mm landscape; margin: 0 !important; }
-                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; }
+                        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
                         
-                        /* Căn chỉnh khung in vừa vặn */
+                        /* Frame nhãn in */
                         .label-container {
                             width: ${w}mm; 
                             height: ${h}mm; 
                             box-sizing: border-box; 
-                            padding: 2.5mm; 
+                            padding: 1.5mm 2mm; /* Viền trong rất nhỏ */
                             font-family: 'Arial', sans-serif; 
                             display: flex; 
                             flex-direction: column; 
                             -webkit-print-color-adjust: exact; 
                             print-color-adjust: exact;
-                            /* Thêm border mờ để biết chỗ cắt giấy nếu in trên A4/A5 */
-                            border: 1px dashed #ddd;
+                        }
+                        
+                        /* Cắt chữ dài nếu có */
+                        .label-container div {
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
                         }
                     </style>
                     </head><body>
