@@ -7,142 +7,201 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 flex h-screen overflow-hidden">
+<body class="bg-gray-50 text-gray-800 flex h-screen overflow-hidden">
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebarOverlay" onclick="app.toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
 
     <!-- Sidebar -->
-    <aside class="bg-slate-800 text-white w-64 flex flex-col hidden md:flex">
-        <div class="p-5 border-b border-slate-700 text-xl font-bold flex items-center gap-2">
-            <i class="fa-regular fa-folder-open text-blue-400"></i> Kho Clearbag
+    <aside id="sidebar" class="bg-slate-800 text-white w-64 flex-col fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 flex">
+        <div class="p-5 border-b border-slate-700 text-xl font-bold flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fa-regular fa-folder-open text-blue-400"></i> Kho Clearbag
+            </div>
+            <button onclick="app.toggleSidebar()" class="md:hidden text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <button onclick="app.switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full text-left px-4 py-3 rounded bg-blue-600 text-white"><i class="fa-solid fa-chart-pie w-6"></i> Tổng quan</button>
-            <button onclick="app.switchView('clearbags')" id="nav-clearbags" class="nav-btn w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white"><i class="fa-solid fa-box w-6"></i> Clearbag</button>
-            <button onclick="app.switchView('subjects')" id="nav-subjects" class="nav-btn w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white"><i class="fa-solid fa-book w-6"></i> Quản lý môn học</button>
+            <button onclick="app.switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full text-left px-4 py-3 rounded bg-blue-600 text-white transition-colors"><i class="fa-solid fa-chart-pie w-6"></i> Tổng quan</button>
+            <button onclick="app.switchView('clearbags')" id="nav-clearbags" class="nav-btn w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white transition-colors"><i class="fa-solid fa-box w-6"></i> Clearbag</button>
+            <button onclick="app.switchView('subjects')" id="nav-subjects" class="nav-btn w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white transition-colors"><i class="fa-solid fa-book w-6"></i> Quản lý môn học</button>
         </nav>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-full overflow-hidden">
+    <main class="flex-1 flex flex-col h-full overflow-hidden w-full">
         <header class="bg-white shadow-sm p-4 flex justify-between items-center z-10">
-            <h2 id="pageTitle" class="text-xl font-bold">Tổng quan</h2>
-            <button onclick="app.openModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                <i class="fa-solid fa-plus"></i> Thêm Túi Mới
+            <div class="flex items-center gap-3">
+                <button onclick="app.toggleSidebar()" class="md:hidden text-gray-600 hover:text-gray-900 focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h2 id="pageTitle" class="text-xl font-bold text-gray-800">Tổng quan</h2>
+            </div>
+            <button onclick="app.openModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                <i class="fa-solid fa-plus mr-1"></i> Thêm Túi
             </button>
         </header>
 
-        <div class="p-6 overflow-y-auto flex-1">
+        <div class="p-4 md:p-6 overflow-y-auto flex-1">
             
             <!-- Dashboard View -->
             <div id="view-dashboard" class="space-y-6">
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
-                        <p class="text-gray-500 text-sm">Tổng số lượng túi</p>
-                        <p id="stat-total" class="text-3xl font-bold">0</p>
+                        <p class="text-gray-500 text-sm font-medium">Tổng số lượng túi</p>
+                        <p id="stat-total" class="text-3xl font-bold mt-1 text-gray-800">0</p>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
-                        <p class="text-gray-500 text-sm">Tổng giá trị</p>
-                        <p id="stat-value" class="text-3xl font-bold">0 ₫</p>
+                        <p class="text-gray-500 text-sm font-medium">Tổng giá trị</p>
+                        <p id="stat-value" class="text-3xl font-bold mt-1 text-gray-800">0 ₫</p>
                     </div>
                 </div>
             </div>
 
             <!-- Clearbags View -->
-            <div id="view-clearbags" class="hidden bg-white rounded-xl shadow-sm border border-gray-200">
-                <div class="p-4 border-b border-gray-200">
-                    <input type="text" id="searchInput" placeholder="Tìm kiếm tên, mã túi..." class="w-full md:w-1/3 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+            <div id="view-clearbags" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 bg-gray-50 flex gap-2">
+                    <div class="relative w-full md:w-1/3">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" id="searchInput" placeholder="Tìm kiếm tên, mã túi..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    </div>
                 </div>
-                <table class="w-full text-left">
-                    <thead class="bg-gray-50 text-gray-500 text-sm">
-                        <tr>
-                            <th class="px-6 py-3 font-medium">Mã</th>
-                            <th class="px-6 py-3 font-medium">Phân loại</th>
-                            <th class="px-6 py-3 font-medium">Tên Clearbag</th>
-                            <th class="px-6 py-3 font-medium">Thông tin Môn học</th>
-                            <th class="px-6 py-3 font-medium text-center">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[800px]">
+                        <thead class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Mã</th>
+                                <th class="px-6 py-3 font-medium">Phân loại</th>
+                                <th class="px-6 py-3 font-medium">Tên Clearbag</th>
+                                <th class="px-6 py-3 font-medium">Thông tin Môn học</th>
+                                <th class="px-6 py-3 font-medium text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-gray-100 bg-white"></tbody>
+                    </table>
+                </div>
             </div>
+
             <!-- Subjects View (Read-only) -->
-            <div id="view-subjects" class="hidden bg-white rounded-xl shadow-sm border border-gray-200">
-                <div class="p-4 border-b border-gray-200 flex gap-4 items-center bg-gray-50 rounded-t-xl">
+            <div id="view-subjects" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 flex flex-wrap gap-4 items-center bg-gray-50">
                     <label class="font-bold text-gray-700">Chọn Học Kỳ:</label>
-                    <select id="filterSemester" onchange="app.renderSubjects()" class="px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700 min-w-[150px]">
-                        <!-- Sẽ render tự động qua JS -->
+                    <select id="filterSemester" onchange="app.renderSubjects()" class="px-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700 min-w-[150px] shadow-sm">
+                        <!-- Rendered by JS -->
                     </select>
                 </div>
-                <table class="w-full text-left">
-                    <thead class="bg-gray-100 text-gray-600 text-sm">
-                        <tr>
-                            <th class="px-6 py-3 font-medium">Mã MH</th>
-                            <th class="px-6 py-3 font-medium">Tên Môn Học (Clearbag)</th>
-                            <th class="px-6 py-3 font-medium">Lịch học</th>
-                            <th class="px-6 py-3 font-medium text-center">Học kỳ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="subjectsTableBody" class="divide-y divide-gray-100"></tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[700px]">
+                        <thead class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Mã MH</th>
+                                <th class="px-6 py-3 font-medium">Tên Môn Học (Clearbag)</th>
+                                <th class="px-6 py-3 font-medium">Lịch học</th>
+                                <th class="px-6 py-3 font-medium text-center">Học kỳ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subjectsTableBody" class="divide-y divide-gray-100 bg-white"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal Form -->
-    <div id="modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 class="text-lg font-bold mb-4" id="modalTitle">Thêm Clearbag</h3>
+    <!-- Main Modal Form -->
+    <div id="modal" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[95vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-5 text-gray-800 border-b pb-2" id="modalTitle">Thêm Clearbag</h3>
             <form id="bagForm" class="space-y-4" onsubmit="return false;">
                 <input type="hidden" id="bagId">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Mã Túi</label>
-                    <input type="text" id="bagCode" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-600 outline-none cursor-not-allowed font-bold">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mã Túi</label>
+                    <input type="text" id="bagCode" readonly class="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 outline-none cursor-not-allowed font-bold">
                 </div>
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-3 gap-3">
                     <div class="col-span-1">
-                        <label class="block text-sm font-medium text-gray-700">Phân loại *</label>
-                        <select id="bagType" onchange="app.toggleTypeFields()" class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phân loại <span class="text-red-500">*</span></label>
+                        <select id="bagType" onchange="app.toggleTypeFields()" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="mon_hoc">Môn học</option>
                             <option value="tai_lieu">Tài liệu</option>
                         </select>
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-700">Tên Clearbag *</label>
-                        <input type="text" id="bagName" required class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tên Clearbag <span class="text-red-500">*</span></label>
+                        <input type="text" id="bagName" required class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập tên túi...">
                     </div>
                 </div>
                 
-                <!-- Các trường hiển thị thêm nếu chọn Môn học -->
-                <div id="subjectFields" class="p-3 bg-blue-50 rounded border border-blue-100 space-y-3">
-                    <div class="grid grid-cols-2 gap-3">
+                <!-- Dynamic Subject Fields -->
+                <div id="subjectFields" class="p-4 bg-blue-50/50 rounded-lg border border-blue-100 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Mã MH (6 ký tự) *</label>
-                            <input type="text" id="subjectCode" maxlength="6" class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500 uppercase" placeholder="VD: CH1001">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã MH <span class="text-red-500">*</span></label>
+                            <input type="text" id="subjectCode" maxlength="6" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-gray-400" placeholder="VD: CH1001">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Học kỳ (Tự động)</label>
-                            <input type="text" id="semester" readonly class="w-full px-3 py-2 border rounded bg-gray-100 text-gray-600 outline-none font-bold">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Học kỳ</label>
+                            <input type="text" id="semester" readonly class="w-full px-3 py-2 border rounded-lg bg-gray-200/60 text-gray-700 outline-none font-bold text-center">
                         </div>
                     </div>
                     <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="block text-sm font-medium text-gray-700">Lịch học *</label>
-                            <button type="button" onclick="app.addScheduleRow()" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 font-semibold"><i class="fa-solid fa-plus"></i> Thêm ngày</button>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Lịch học <span class="text-red-500">*</span></label>
+                            <button type="button" onclick="app.addScheduleRow()" class="text-xs bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 font-semibold shadow-sm transition-colors"><i class="fa-solid fa-plus"></i> Thêm ngày</button>
                         </div>
-                        <div id="scheduleContainer" class="space-y-2 max-h-32 overflow-y-auto no-scrollbar border p-2 rounded bg-white">
+                        <div id="scheduleContainer" class="space-y-2 max-h-40 overflow-y-auto no-scrollbar border p-2 rounded-lg bg-white shadow-inner">
+                            <!-- Schedules rendered here -->
                         </div>
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" onclick="app.closeModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
-                    <button type="button" onclick="app.saveData()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Lưu lại</button>
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                    <button type="button" onclick="app.closeModal()" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors">Hủy</button>
+                    <button type="button" onclick="app.saveData()" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-colors">Lưu thông tin</button>
                 </div>
             </form>
         </div>
     </div>
+
+    <!-- THIẾT KẾ BỊ THIẾU: Modal Chọn Tuần -->
+    <div id="weekModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm">
+            <h4 class="font-bold text-lg mb-4 text-gray-800 border-b pb-2">Chọn tuần học</h4>
+            <div id="weekGrid" class="grid grid-cols-5 gap-2 mb-6">
+                <!-- Grid rendered by JS -->
+            </div>
+            <div class="flex justify-end gap-3">
+                <button onclick="app.closeWeekModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Hủy</button>
+                <button onclick="app.saveWeeks()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- THIẾT KẾ BỊ THIẾU: Modal In Nhãn -->
+    <div id="printModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs">
+            <h4 class="font-bold text-lg mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-print text-gray-500 mr-2"></i>In Nhãn Clearbag</h4>
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Khổ giấy in</label>
+                <select id="printSize" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="60x40">60 x 40 mm</option>
+                    <option value="70x50">70 x 50 mm (Khuyên dùng)</option>
+                    <option value="90x50">90 x 50 mm</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button onclick="app.closePrintModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Hủy</button>
+                <button onclick="app.executePrint()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"><i class="fa-solid fa-print mr-1"></i> In ngay</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -152,7 +211,9 @@
             constructor() {
                 this.bags = [];
                 this.search = '';
-                this.currentSchedules = []; // Lưu trữ mảng lịch học khi nhập
+                this.currentSchedules = []; 
+                this.currentScheduleIndex = 0;
+                this.currentPrintId = null;
                 
                 // Cấu hình Database
                 const firebaseConfig = { 
@@ -174,7 +235,7 @@
                         });
                     }
                     this.render();
-                    this.updateSemesterFilter(); // Cập nhật dropdown ở View Môn học
+                    this.updateSemesterFilter(); 
                 });
 
                 document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -182,13 +243,27 @@
                     this.render();
                 });
 
-                // Ép mã MH viết hoa, không dấu
+                // Ép mã MH viết hoa, không dấu, tối đa 6 kí tự
                 document.getElementById('subjectCode').addEventListener('input', function(e) {
                     let val = e.target.value;
                     val = val.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                     val = val.replace(/[^A-Za-z0-9]/g, '');
-                    e.target.value = val.toUpperCase();
+                    e.target.value = val.toUpperCase().substring(0, 6);
                 });
+            }
+
+            // Mobile Sidebar Toggle
+            toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebarOverlay');
+                
+                if (sidebar.classList.contains('-translate-x-full')) {
+                    sidebar.classList.remove('-translate-x-full');
+                    overlay.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
             }
 
             switchView(view) {
@@ -209,6 +284,11 @@
                 
                 const titles = { 'dashboard': 'Tổng quan', 'clearbags': 'Danh sách Clearbag', 'subjects': 'Quản lý Môn học' };
                 document.getElementById('pageTitle').innerText = titles[view];
+
+                // Auto-close sidebar on mobile after clicking
+                if (window.innerWidth < 768) {
+                    this.toggleSidebar();
+                }
 
                 if(view === 'subjects') this.renderSubjects();
             }
@@ -253,75 +333,84 @@
 
             render() {
                 const tbody = document.getElementById('tableBody');
-                tbody.innerHTML = '';
                 let totalBags = 0;
 
-                this.bags.forEach(bag => {
-                    totalBags++;
-                    if (bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search)) {
-                        const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Tài liệu</span>';
+                // Sử dụng .map().join('') tối ưu hiệu suất hơn thay vì innerHTML +=
+                const filteredBags = this.bags.filter(bag => {
+                    const match = bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search);
+                    if(match) totalBags++;
+                    return match;
+                });
+
+                if (filteredBags.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 italic">Không tìm thấy túi nào.</td></tr>`;
+                } else {
+                    tbody.innerHTML = filteredBags.map(bag => {
+                        const typeLabel = bag.type === 'mon_hoc' 
+                            ? '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">Môn học</span>' 
+                            : '<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-bold border border-gray-200">Tài liệu</span>';
                         
-                        let extraInfo = '';
+                        let extraInfo = '<span class="text-gray-400 italic text-sm">-</span>';
                         if (bag.type === 'mon_hoc') {
                             let scheduleHtml = '';
                             if(bag.schedules && Array.isArray(bag.schedules)) {
                                 scheduleHtml = bag.schedules.map(s => {
-                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1">Tuần: ${s.weeks}</span>` : '';
-                                    return `<div class="mt-0.5"><i class="fa-regular fa-clock w-3"></i> ${s.day}, ${s.start} - ${s.end} ${wInfo}</div>`;
+                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100/80 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">Tuần ${s.weeks}</span>` : '';
+                                    return `<div class="mt-1 flex items-center text-sm"><i class="fa-regular fa-clock w-4 text-gray-400"></i> ${s.day}, ${s.start} - ${s.end} ${wInfo}</div>`;
                                 }).join('');
                             }
                             extraInfo = `
-                                <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
-                                    <span class="font-bold text-gray-800">${bag.subjectCode}</span> (HK: ${bag.semester})<br>
+                                <div class="text-gray-600 bg-white p-2 rounded-lg border border-gray-100 shadow-sm inline-block min-w-[220px]">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-bold text-gray-800 text-sm">${bag.subjectCode || 'N/A'}</span>
+                                        <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">HK: ${bag.semester || 'N/A'}</span>
+                                    </div>
                                     ${scheduleHtml}
                                 </div>
                             `;
                         }
 
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b">
+                        return `
+                            <tr class="hover:bg-gray-50/50 border-b border-gray-100 transition-colors group">
                                 <td class="px-6 py-4 font-semibold text-blue-600 align-top">${bag.code}</td>
                                 <td class="px-6 py-4 align-top whitespace-nowrap">${typeLabel}</td>
                                 <td class="px-6 py-4 align-top font-medium text-gray-800">${bag.name}</td>
-                                <td class="px-6 py-4 align-top min-w-[200px]">${extraInfo}</td>
+                                <td class="px-6 py-4 align-top">${extraInfo}</td>
                                 <td class="px-6 py-4 text-center align-top whitespace-nowrap">
-                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 px-2 py-1 rounded mx-1" title="In nhãn"><i class="fa-solid fa-print"></i></button>
-                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-1" title="Sửa"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 mx-1" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 hover:shadow p-2 rounded-lg mx-0.5 transition-all" title="In nhãn"><i class="fa-solid fa-print"></i></button>
+                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 hover:shadow p-2 rounded-lg mx-0.5 transition-all" title="Sửa"><i class="fa-solid fa-pen text-sm"></i></button>
+                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 hover:shadow p-2 rounded-lg mx-0.5 transition-all" title="Xóa"><i class="fa-solid fa-trash text-sm"></i></button>
                                 </td>
                             </tr>
                         `;
-                    }
-                });
+                    }).join('');
+                }
 
                 document.getElementById('stat-total').innerText = totalBags;
                 document.getElementById('stat-value').innerText = "N/A"; 
             }
 
-            // ------------------------------------------
-            // Tính năng Mới: VIEW Môn Học (Chỉ xem)
-            // ------------------------------------------
             updateSemesterFilter() {
                 const select = document.getElementById('filterSemester');
                 const currentVal = select.value;
                 const semesters = [...new Set(this.bags.filter(b => b.type === 'mon_hoc' && b.semester).map(b => b.semester))].sort().reverse();
                 
-                select.innerHTML = '<option value="ALL">Tất cả học kỳ</option>';
+                let options = '<option value="ALL">Tất cả học kỳ</option>';
                 semesters.forEach(hk => {
-                    select.innerHTML += `<option value="${hk}">Học kỳ ${hk}</option>`;
+                    options += `<option value="${hk}">Học kỳ ${hk}</option>`;
                 });
+                select.innerHTML = options;
                 
                 if (currentVal && semesters.includes(currentVal)) select.value = currentVal;
                 else if (semesters.length > 0) select.value = semesters[0]; // Mặc định HK mới nhất
                 
-                if (document.getElementById('view-subjects').classList.contains('hidden') === false) {
+                if (!document.getElementById('view-subjects').classList.contains('hidden')) {
                     this.renderSubjects();
                 }
             }
 
             renderSubjects() {
                 const tbody = document.getElementById('subjectsTableBody');
-                tbody.innerHTML = '';
                 const hkFilter = document.getElementById('filterSemester').value;
 
                 let subjects = this.bags.filter(b => b.type === 'mon_hoc');
@@ -330,58 +419,53 @@
                 }
 
                 if(subjects.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 italic">Không có môn học nào trong học kỳ này.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">Không có môn học nào trong học kỳ này.</td></tr>`;
                     return;
                 }
 
-                subjects.forEach(bag => {
+                tbody.innerHTML = subjects.map(bag => {
                     let scheduleHtml = '';
                     if(bag.schedules && Array.isArray(bag.schedules)) {
-                        scheduleHtml = bag.schedules.map(s => `<span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded mr-1 mb-1 border border-blue-100">${s.day}, ${s.start} - ${s.end}</span>`).join('');
+                        scheduleHtml = bag.schedules.map(s => 
+                            `<span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded mr-1 mb-1 border border-blue-100 font-medium">
+                                ${s.day}, ${s.start} - ${s.end}
+                            </span>`
+                        ).join('');
                     }
 
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-gray-50 border-b">
-                            <td class="px-6 py-4 font-bold text-gray-800">${bag.subjectCode}</td>
-                            <td class="px-6 py-4 text-gray-700">${bag.name}</td>
+                    return `
+                        <tr class="hover:bg-gray-50 border-b transition-colors">
+                            <td class="px-6 py-4 font-bold text-gray-800">${bag.subjectCode || 'N/A'}</td>
+                            <td class="px-6 py-4 text-gray-700 font-medium">${bag.name}</td>
                             <td class="px-6 py-4">${scheduleHtml}</td>
-                            <td class="px-6 py-4 text-center font-semibold text-blue-600">${bag.semester}</td>
+                            <td class="px-6 py-4 text-center font-bold text-blue-600 bg-gray-50/50">${bag.semester || 'N/A'}</td>
                         </tr>
                     `;
-                });
+                }).join('');
             }
 
             renderScheduleUI() {
                 const container = document.getElementById('scheduleContainer');
-                container.innerHTML = '';
                 if(this.currentSchedules.length === 0) {
-                    container.innerHTML = '<div class="text-xs text-gray-400 text-center italic py-2">Chưa thêm lịch học</div>';
+                    container.innerHTML = '<div class="text-sm text-gray-400 text-center italic py-4 bg-gray-50 border border-dashed rounded-lg">Chưa thêm lịch học</div>';
                     return;
                 }
                 
-                this.currentSchedules.forEach((sch, idx) => {
-                    container.innerHTML += `
-                        <div class="flex flex-wrap gap-1 items-center bg-gray-50 p-2 rounded border border-gray-200">
-                            <select id="schDay_${idx}" onchange="app.updateScheduleVal(${idx}, 'day', this.value)" class="w-20 px-1 py-1 border rounded outline-none text-xs">
-                                <option value="Thứ 2" ${sch.day==='Thứ 2'?'selected':''}>Thứ 2</option>
-                                <option value="Thứ 3" ${sch.day==='Thứ 3'?'selected':''}>Thứ 3</option>
-                                <option value="Thứ 4" ${sch.day==='Thứ 4'?'selected':''}>Thứ 4</option>
-                                <option value="Thứ 5" ${sch.day==='Thứ 5'?'selected':''}>Thứ 5</option>
-                                <option value="Thứ 6" ${sch.day==='Thứ 6'?'selected':''}>Thứ 6</option>
-                                <option value="Thứ 7" ${sch.day==='Thứ 7'?'selected':''}>Thứ 7</option>
-                                <option value="Chủ nhật" ${sch.day==='Chủ nhật'?'selected':''}>Chủ nhật</option>
-                            </select>
-                            <input type="time" id="schStart_${idx}" value="${sch.start}" onchange="app.updateScheduleVal(${idx}, 'start', this.value)" class="w-[70px] px-1 py-1 border rounded outline-none text-xs">
-                            <span class="text-xs text-gray-500">-</span>
-                            <input type="time" id="schEnd_${idx}" value="${sch.end}" onchange="app.updateScheduleVal(${idx}, 'end', this.value)" class="w-[70px] px-1 py-1 border rounded outline-none text-xs">
-                            <div class="flex flex-1 items-center gap-1 min-w-[100px]">
-                                <input type="text" id="schWeeks_${idx}" value="${sch.weeks || ''}" readonly placeholder="Tuần" class="w-full px-1 py-1 text-xs border rounded bg-white text-gray-600 outline-none cursor-pointer" onclick="app.openWeekModal(${idx})" title="Bấm để chọn tuần">
-                                <button type="button" onclick="app.openWeekModal(${idx})" class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-1 rounded">Chọn</button>
-                            </div>
-                            <button type="button" onclick="app.removeScheduleRow(${idx})" class="text-red-500 hover:text-red-700 px-1 py-1"><i class="fa-solid fa-xmark"></i></button>
+                container.innerHTML = this.currentSchedules.map((sch, idx) => `
+                    <div class="flex flex-wrap gap-2 items-center bg-gray-50 p-2.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                        <select onchange="app.updateScheduleVal(${idx}, 'day', this.value)" class="w-[90px] px-2 py-1.5 border rounded-md outline-none text-sm bg-white focus:ring-1 focus:ring-blue-500">
+                            ${['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(d => `<option value="${d}" ${sch.day === d ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                        <input type="time" value="${sch.start}" onchange="app.updateScheduleVal(${idx}, 'start', this.value)" class="w-[85px] px-2 py-1.5 border rounded-md outline-none text-sm bg-white focus:ring-1 focus:ring-blue-500">
+                        <span class="text-sm text-gray-400 font-medium">-</span>
+                        <input type="time" value="${sch.end}" onchange="app.updateScheduleVal(${idx}, 'end', this.value)" class="w-[85px] px-2 py-1.5 border rounded-md outline-none text-sm bg-white focus:ring-1 focus:ring-blue-500">
+                        <div class="flex flex-1 items-center gap-1 min-w-[120px]">
+                            <input type="text" value="${sch.weeks || ''}" readonly placeholder="Tuần học" class="w-full px-2 py-1.5 text-sm border rounded-md bg-white text-gray-700 outline-none cursor-pointer focus:ring-1 focus:ring-blue-500" onclick="app.openWeekModal(${idx})" title="Bấm để chọn tuần">
+                            <button type="button" onclick="app.openWeekModal(${idx})" class="text-xs bg-blue-100 text-blue-700 px-2 py-1.5 rounded-md hover:bg-blue-200 transition-colors font-medium">Chọn</button>
                         </div>
-                    `;
-                });
+                        <button type="button" onclick="app.removeScheduleRow(${idx})" class="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-md transition-colors" title="Xóa dòng này"><i class="fa-solid fa-xmark text-sm w-4 h-4 flex items-center justify-center"></i></button>
+                    </div>
+                `).join('');
             }
 
             addScheduleRow() {
@@ -400,14 +484,12 @@
                 }
             }
 
-            // ------------------------------------------
-            // Modal Tương tác
-            // ------------------------------------------
+            // Modal Tương tác Form Clearbag
             openModal() {
                 document.getElementById('bagForm').reset();
                 document.getElementById('bagId').value = '';
                 document.getElementById('bagCode').value = this.generateRandomCode();
-                document.getElementById('modalTitle').innerText = 'Thêm Clearbag';
+                document.getElementById('modalTitle').innerText = 'Thêm Clearbag Mới';
                 
                 this.currentSchedules = [];
                 this.renderScheduleUI();
@@ -459,7 +541,7 @@
 
                 if (typeInput === 'mon_hoc') {
                     const subjCode = document.getElementById('subjectCode').value.trim().toUpperCase();
-                    if (subjCode.length !== 6) return alert("Mã môn học phải có đúng 6 ký tự!");
+                    if (subjCode.length === 0) return alert("Vui lòng nhập mã môn học!");
                     
                     // CHỐNG TRÙNG MÃ MÔN HỌC
                     const isDuplicate = this.bags.some(b => b.type === 'mon_hoc' && b.subjectCode === subjCode && b.id !== idInput);
@@ -468,7 +550,7 @@
                     if (this.currentSchedules.length === 0) return alert("Vui lòng thêm ít nhất 1 buổi học!");
                     for(let i=0; i<this.currentSchedules.length; i++) {
                         let s = this.currentSchedules[i];
-                        if(!s.start || !s.end) return alert(`Vui lòng chọn đầy đủ thời gian ở dòng lịch học số ${i+1}`);
+                        if(!s.start || !s.end) return alert(`Vui lòng chọn đầy đủ thời gian bắt đầu/kết thúc ở lịch học số ${i+1}`);
                     }
 
                     dataToSave.subjectCode = subjCode;
@@ -477,32 +559,52 @@
                 }
 
                 const key = idInput || codeInput;
-                await set(ref(this.db, 'clearbags/' + key), dataToSave);
-                this.closeModal();
+                try {
+                    await set(ref(this.db, 'clearbags/' + key), dataToSave);
+                    this.closeModal();
+                } catch(e) {
+                    alert("Lỗi khi lưu dữ liệu: " + e.message);
+                }
             }
 
             async deleteBag(id) {
-                if(confirm('Bạn có chắc muốn xóa túi này?')) {
+                if(confirm('Bạn có chắc muốn xóa túi này khỏi hệ thống? Dữ liệu không thể khôi phục.')) {
                     await remove(ref(this.db, 'clearbags/' + id));
                 }
             }
 
-            // ------------------------------------------
-            // Xử lý Modal Chọn Tuần
-            // ------------------------------------------
+            // Modal Chọn Tuần
             openWeekModal(idx) {
                 this.currentScheduleIndex = idx;
                 const sch = this.currentSchedules[idx];
                 const selectedWeeks = sch.weeks ? sch.weeks.split(',').map(Number) : [];
+                
                 const grid = document.getElementById('weekGrid');
-                grid.innerHTML = '';
+                let html = '';
                 for(let i=1; i<=25; i++) {
                     const checked = selectedWeeks.includes(i) ? 'checked' : '';
-                    grid.innerHTML += `
-                        <label class="flex items-center gap-1.5 text-sm border p-2 rounded cursor-pointer hover:bg-blue-50 transition-colors">
-                            <input type="checkbox" value="${i}" class="week-cb w-4 h-4 text-blue-600 rounded" ${checked}> T${i}
+                    html += `
+                        <label class="flex flex-col items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors ${checked ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}">
+                            <input type="checkbox" value="${i}" class="week-cb w-4 h-4 text-blue-600 rounded mb-1" ${checked}>
+                            <span class="text-xs font-medium text-gray-700">T${i}</span>
                         </label>`;
                 }
+                grid.innerHTML = html;
+                
+                // Add event listener to visually highlight selected labels
+                document.querySelectorAll('.week-cb').forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        const label = e.target.closest('label');
+                        if(e.target.checked) {
+                            label.classList.add('bg-blue-50', 'border-blue-300');
+                            label.classList.remove('bg-gray-50', 'border-gray-200');
+                        } else {
+                            label.classList.remove('bg-blue-50', 'border-blue-300');
+                            label.classList.add('bg-gray-50', 'border-gray-200');
+                        }
+                    });
+                });
+
                 document.getElementById('weekModal').classList.remove('hidden');
             }
 
@@ -518,9 +620,7 @@
                 this.closeWeekModal();
             }
 
-            // ------------------------------------------
-            // Xử lý Modal In Nhãn
-            // ------------------------------------------
+            // Modal In Nhãn
             openPrintModal(id) {
                 this.currentPrintId = id;
                 document.getElementById('printModal').classList.remove('hidden');
@@ -542,31 +642,47 @@
                 let content = '';
                 if (bag.type === 'tai_lieu') {
                     content = `
-                        <div style="font-weight:bold; font-size:11pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #000; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:9pt; margin-bottom: 1.5mm;"><b>Tên:</b> ${bag.name}</div>
-                        <div style="font-size:9pt; margin-bottom: 1.5mm;"><b>Mã túi:</b> ${bag.code}</div>
-                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic;">In lúc: ${timeStr}</div>
+                        <div style="font-weight:bold; font-size:12pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #333; padding-bottom: 2mm;">BÌA ĐỰNG TÀI LIỆU</div>
+                        <div style="font-size:10pt; margin-bottom: 2mm;"><b>Tên:</b> ${bag.name}</div>
+                        <div style="font-size:10pt; margin-bottom: 2mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic; color: #555;">In lúc: ${timeStr}</div>
                     `;
                 } else {
                     let schStr = (bag.schedules || []).map(s => `${s.day} (${s.start}-${s.end})`).join(', ');
                     content = `
-                        <div style="font-weight:bold; font-size:11pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #000; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:9pt; margin-bottom: 1mm;"><b>Tên MH:</b> ${bag.name}</div>
-                        <div style="font-size:9pt; margin-bottom: 1mm;"><b>Mã túi:</b> ${bag.code}</div>
-                        <div style="font-size:8pt; margin-bottom: 1mm;"><b>Lịch:</b> ${schStr}</div>
-                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic;">In lúc: ${timeStr}</div>
+                        <div style="font-weight:bold; font-size:12pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #333; padding-bottom: 2mm;">BÌA ĐỰNG TÀI LIỆU</div>
+                        <div style="font-size:10pt; margin-bottom: 1.5mm;"><b>Tên MH:</b> ${bag.name}</div>
+                        <div style="font-size:10pt; margin-bottom: 1.5mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div style="font-size:8pt; margin-bottom: 1.5mm;"><b>Lịch học:</b> ${schStr}</div>
+                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic; color: #555;">In lúc: ${timeStr}</div>
                     `;
                 }
 
                 const printWindow = window.open('', '_blank');
                 printWindow.document.write(`
-                    <html><head><title>In Nhãn ${bag.code}</title><style>
+                    <!DOCTYPE html>
+                    <html><head>
+                    <title>In Nhãn - ${bag.code}</title>
+                    <style>
                         @page { size: ${w}mm ${h}mm landscape; margin: 0; }
-                        body { margin: 0; padding: 2mm; width: ${w}mm; height: ${h}mm; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
-                    </style></head><body>${content}
+                        body { 
+                            margin: 0; 
+                            padding: 3mm; 
+                            width: ${w}mm; 
+                            height: ${h}mm; 
+                            box-sizing: border-box; 
+                            font-family: 'Arial', sans-serif; 
+                            display: flex; 
+                            flex-direction: column; 
+                            -webkit-print-color-adjust: exact; 
+                            print-color-adjust: exact;
+                        }
+                    </style>
+                    </head><body>
+                    ${content}
                     <script>
                         window.onload = function() {
-                            setTimeout(() => { window.print(); window.close(); }, 300);
+                            setTimeout(() => { window.print(); window.close(); }, 500);
                         };
                     <\/script>
                     </body></html>
@@ -575,6 +691,8 @@
                 this.closePrintModal();
             }
         }
+        
+        // Cấp phát instance ra global để thẻ HTML có thể gọi hàm qua onlick=""
         window.app = new ClearbagApp();
     </script>
 </body>
