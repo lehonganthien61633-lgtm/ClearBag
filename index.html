@@ -614,10 +614,17 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     name: nameInput
                 };
 
-                if (typeInput === 'mon_hoc') {
+                if (typeInput === 'tai_lieu') {
+                    // CẢNH BÁO TRÙNG TÊN TÀI LIỆU
+                    const isDuplicateDoc = this.bags.some(b => b.type === 'tai_lieu' && b.name.toLowerCase() === nameInput.toLowerCase() && b.id !== idInput);
+                    if (isDuplicateDoc) {
+                        return alert(`Túi tài liệu có tên "${nameInput}" đã tồn tại trong kho! Vui lòng đặt tên khác.`);
+                    }
+                } else if (typeInput === 'mon_hoc') {
                     const subjCode = document.getElementById('subjectCode').value.trim().toUpperCase();
                     if (subjCode.length !== 6) return alert("Mã môn học phải có đúng 6 ký tự!");
                     
+                    // CHỐNG TRÙNG MÃ MÔN HỌC
                     const isDuplicate = this.bags.some(b => b.type === 'mon_hoc' && b.subjectCode === subjCode && b.id !== idInput);
                     if (isDuplicate) return alert(`Mã môn học ${subjCode} đã tồn tại trong kho! Vui lòng nhập mã khác.`);
                     
@@ -635,12 +642,6 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const key = idInput || codeInput;
                 await set(ref(this.db, 'clearbags/' + key), dataToSave);
                 this.closeModal();
-            }
-
-            async deleteBag(id) {
-                if(confirm('Bạn có chắc muốn xóa túi này?')) {
-                    await remove(ref(this.db, 'clearbags/' + id));
-                }
             }
 
             // --- XỬ LÝ CHỌN TUẦN ---
