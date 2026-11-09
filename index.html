@@ -183,21 +183,33 @@
         </div>
     </div>
 
-    <!-- THIẾT KẾ BỊ THIẾU: Modal In Nhãn -->
-    <div id="printModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs">
-            <h4 class="font-bold text-lg mb-4 text-gray-800 border-b pb-2"><i class="fa-solid fa-print text-gray-500 mr-2"></i>In Nhãn Clearbag</h4>
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Khổ giấy in</label>
-                <select id="printSize" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="60x40">60 x 40 mm</option>
-                    <option value="70x50">70 x 50 mm (Khuyên dùng)</option>
-                    <option value="90x50">90 x 50 mm</option>
+   <!-- Modal In Nhãn -->
+    <div id="printModal" class="fixed inset-0 bg-black/50 z-[55] hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h3 class="text-lg font-bold mb-4">In Nhãn Clearbag</h3>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kích thước nhãn in</label>
+                <select id="printSize" class="w-full px-3 py-2 border rounded outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="40x30">40x30 mm</option>
+                    <option value="50x30">50x30 mm</option>
                 </select>
             </div>
-            <div class="flex justify-end gap-3">
-                <button onclick="app.closePrintModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Hủy</button>
-                <button onclick="app.executePrint()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"><i class="fa-solid fa-print mr-1"></i> In ngay</button>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="app.closePrintModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
+                <button type="button" onclick="app.executePrint()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"><i class="fa-solid fa-print"></i> In Nhãn</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chọn Tuần Học -->
+    <div id="weekModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 class="text-lg font-bold mb-4">Chọn Tuần Học</h3>
+            <div id="weekGrid" class="grid grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1">
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="app.closeWeekModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Hủy</button>
+                <button type="button" onclick="app.saveWeeks()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Xác nhận</button>
             </div>
         </div>
     </div>
@@ -333,58 +345,46 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             render() {
                 const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
                 let totalBags = 0;
 
-                // Sử dụng .map().join('') tối ưu hiệu suất hơn thay vì innerHTML +=
-                const filteredBags = this.bags.filter(bag => {
-                    const match = bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search);
-                    if(match) totalBags++;
-                    return match;
-                });
-
-                if (filteredBags.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 italic">Không tìm thấy túi nào.</td></tr>`;
-                } else {
-                    tbody.innerHTML = filteredBags.map(bag => {
-                        const typeLabel = bag.type === 'mon_hoc' 
-                            ? '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-200">Môn học</span>' 
-                            : '<span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-bold border border-gray-200">Tài liệu</span>';
+                this.bags.forEach(bag => {
+                    totalBags++;
+                    if (bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search)) {
+                        const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">Tài liệu</span>';
                         
-                        let extraInfo = '<span class="text-gray-400 italic text-sm">-</span>';
+                        let extraInfo = '';
                         if (bag.type === 'mon_hoc') {
                             let scheduleHtml = '';
                             if(bag.schedules && Array.isArray(bag.schedules)) {
                                 scheduleHtml = bag.schedules.map(s => {
-                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100/80 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">Tuần ${s.weeks}</span>` : '';
-                                    return `<div class="mt-1 flex items-center text-sm"><i class="fa-regular fa-clock w-4 text-gray-400"></i> ${s.day}, ${s.start} - ${s.end} ${wInfo}</div>`;
+                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">Tuần: ${s.weeks}</span>` : '';
+                                    return `<div class="mt-0.5 flex items-center"><i class="fa-regular fa-clock w-3 mr-1"></i> ${s.day}, ${s.start} - ${s.end} ${wInfo}</div>`;
                                 }).join('');
                             }
                             extraInfo = `
-                                <div class="text-gray-600 bg-white p-2 rounded-lg border border-gray-100 shadow-sm inline-block min-w-[220px]">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="font-bold text-gray-800 text-sm">${bag.subjectCode || 'N/A'}</span>
-                                        <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-600">HK: ${bag.semester || 'N/A'}</span>
-                                    </div>
+                                <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                    <span class="font-bold text-gray-800">${bag.subjectCode}</span> (HK: ${bag.semester})<br>
                                     ${scheduleHtml}
                                 </div>
                             `;
                         }
 
-                        return `
-                            <tr class="hover:bg-gray-50/50 border-b border-gray-100 transition-colors group">
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-gray-50 border-b">
                                 <td class="px-6 py-4 font-semibold text-blue-600 align-top">${bag.code}</td>
                                 <td class="px-6 py-4 align-top whitespace-nowrap">${typeLabel}</td>
                                 <td class="px-6 py-4 align-top font-medium text-gray-800">${bag.name}</td>
-                                <td class="px-6 py-4 align-top">${extraInfo}</td>
+                                <td class="px-6 py-4 align-top min-w-[200px]">${extraInfo}</td>
                                 <td class="px-6 py-4 text-center align-top whitespace-nowrap">
-                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 hover:shadow p-2 rounded-lg mx-0.5 transition-all" title="In nhãn"><i class="fa-solid fa-print"></i></button>
-                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 hover:shadow p-2 rounded-lg mx-0.5 transition-all" title="Sửa"><i class="fa-solid fa-pen text-sm"></i></button>
-                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 bg-red-50 hover:bg-red-100 hover:shadow p-2 rounded-lg mx-0.5 transition-all" title="Xóa"><i class="fa-solid fa-trash text-sm"></i></button>
+                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 px-2 py-1 rounded mx-1" title="In nhãn"><i class="fa-solid fa-print"></i></button>
+                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-1" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 mx-1" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                 </td>
                             </tr>
                         `;
-                    }).join('');
-                }
+                    }
+                });
 
                 document.getElementById('stat-total').innerText = totalBags;
                 document.getElementById('stat-value').innerText = "N/A"; 
@@ -446,26 +446,35 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             renderScheduleUI() {
                 const container = document.getElementById('scheduleContainer');
+                container.innerHTML = '';
                 if(this.currentSchedules.length === 0) {
-                    container.innerHTML = '<div class="text-sm text-gray-400 text-center italic py-4 bg-gray-50 border border-dashed rounded-lg">Chưa thêm lịch học</div>';
+                    container.innerHTML = '<div class="text-xs text-gray-400 text-center italic py-2">Chưa thêm lịch học</div>';
                     return;
                 }
                 
-                container.innerHTML = this.currentSchedules.map((sch, idx) => `
-                    <div class="flex flex-wrap gap-2 items-center bg-gray-50 p-2.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                        <select onchange="app.updateScheduleVal(${idx}, 'day', this.value)" class="w-[90px] px-2 py-1.5 border rounded-md outline-none text-sm bg-white focus:ring-1 focus:ring-blue-500">
-                            ${['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(d => `<option value="${d}" ${sch.day === d ? 'selected' : ''}>${d}</option>`).join('')}
-                        </select>
-                        <input type="time" value="${sch.start}" onchange="app.updateScheduleVal(${idx}, 'start', this.value)" class="w-[85px] px-2 py-1.5 border rounded-md outline-none text-sm bg-white focus:ring-1 focus:ring-blue-500">
-                        <span class="text-sm text-gray-400 font-medium">-</span>
-                        <input type="time" value="${sch.end}" onchange="app.updateScheduleVal(${idx}, 'end', this.value)" class="w-[85px] px-2 py-1.5 border rounded-md outline-none text-sm bg-white focus:ring-1 focus:ring-blue-500">
-                        <div class="flex flex-1 items-center gap-1 min-w-[120px]">
-                            <input type="text" value="${sch.weeks || ''}" readonly placeholder="Tuần học" class="w-full px-2 py-1.5 text-sm border rounded-md bg-white text-gray-700 outline-none cursor-pointer focus:ring-1 focus:ring-blue-500" onclick="app.openWeekModal(${idx})" title="Bấm để chọn tuần">
-                            <button type="button" onclick="app.openWeekModal(${idx})" class="text-xs bg-blue-100 text-blue-700 px-2 py-1.5 rounded-md hover:bg-blue-200 transition-colors font-medium">Chọn</button>
+                this.currentSchedules.forEach((sch, idx) => {
+                    container.innerHTML += `
+                        <div class="flex flex-wrap gap-1 items-center bg-gray-50 p-2 rounded border border-gray-200">
+                            <select id="schDay_${idx}" onchange="app.updateScheduleVal(${idx}, 'day', this.value)" class="w-20 px-1 py-1 border rounded outline-none text-xs">
+                                <option value="Thứ 2" ${sch.day==='Thứ 2'?'selected':''}>Thứ 2</option>
+                                <option value="Thứ 3" ${sch.day==='Thứ 3'?'selected':''}>Thứ 3</option>
+                                <option value="Thứ 4" ${sch.day==='Thứ 4'?'selected':''}>Thứ 4</option>
+                                <option value="Thứ 5" ${sch.day==='Thứ 5'?'selected':''}>Thứ 5</option>
+                                <option value="Thứ 6" ${sch.day==='Thứ 6'?'selected':''}>Thứ 6</option>
+                                <option value="Thứ 7" ${sch.day==='Thứ 7'?'selected':''}>Thứ 7</option>
+                                <option value="Chủ nhật" ${sch.day==='Chủ nhật'?'selected':''}>Chủ nhật</option>
+                            </select>
+                            <input type="time" id="schStart_${idx}" value="${sch.start}" onchange="app.updateScheduleVal(${idx}, 'start', this.value)" class="w-[70px] px-1 py-1 border rounded outline-none text-xs">
+                            <span class="text-xs text-gray-500">-</span>
+                            <input type="time" id="schEnd_${idx}" value="${sch.end}" onchange="app.updateScheduleVal(${idx}, 'end', this.value)" class="w-[70px] px-1 py-1 border rounded outline-none text-xs">
+                            <div class="flex flex-1 items-center gap-1 min-w-[90px]">
+                                <input type="text" value="${sch.weeks || ''}" readonly placeholder="Tuần" class="w-full px-1 py-1 text-xs border rounded bg-white text-gray-600 outline-none cursor-pointer" onclick="app.openWeekModal(${idx})" title="Chọn tuần">
+                                <button type="button" onclick="app.openWeekModal(${idx})" class="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-1 rounded">Chọn</button>
+                            </div>
+                            <button type="button" onclick="app.removeScheduleRow(${idx})" class="text-red-500 hover:text-red-700 px-1 py-1"><i class="fa-solid fa-xmark"></i></button>
                         </div>
-                        <button type="button" onclick="app.removeScheduleRow(${idx})" class="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-md transition-colors" title="Xóa dòng này"><i class="fa-solid fa-xmark text-sm w-4 h-4 flex items-center justify-center"></i></button>
-                    </div>
-                `).join('');
+                    `;
+                });
             }
 
             addScheduleRow() {
@@ -541,7 +550,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                 if (typeInput === 'mon_hoc') {
                     const subjCode = document.getElementById('subjectCode').value.trim().toUpperCase();
-                    if (subjCode.length === 0) return alert("Vui lòng nhập mã môn học!");
+                    if (subjCode.length !== 6) return alert("Mã môn học phải có đúng 6 ký tự!");
                     
                     // CHỐNG TRÙNG MÃ MÔN HỌC
                     const isDuplicate = this.bags.some(b => b.type === 'mon_hoc' && b.subjectCode === subjCode && b.id !== idInput);
@@ -550,7 +559,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     if (this.currentSchedules.length === 0) return alert("Vui lòng thêm ít nhất 1 buổi học!");
                     for(let i=0; i<this.currentSchedules.length; i++) {
                         let s = this.currentSchedules[i];
-                        if(!s.start || !s.end) return alert(`Vui lòng chọn đầy đủ thời gian bắt đầu/kết thúc ở lịch học số ${i+1}`);
+                        if(!s.start || !s.end) return alert(`Vui lòng chọn đầy đủ thời gian ở dòng lịch học số ${i+1}`);
                     }
 
                     dataToSave.subjectCode = subjCode;
@@ -559,52 +568,32 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 }
 
                 const key = idInput || codeInput;
-                try {
-                    await set(ref(this.db, 'clearbags/' + key), dataToSave);
-                    this.closeModal();
-                } catch(e) {
-                    alert("Lỗi khi lưu dữ liệu: " + e.message);
-                }
+                await set(ref(this.db, 'clearbags/' + key), dataToSave);
+                this.closeModal();
             }
 
             async deleteBag(id) {
-                if(confirm('Bạn có chắc muốn xóa túi này khỏi hệ thống? Dữ liệu không thể khôi phục.')) {
+                if(confirm('Bạn có chắc muốn xóa túi này?')) {
                     await remove(ref(this.db, 'clearbags/' + id));
                 }
             }
 
-            // Modal Chọn Tuần
+            // ------------------------------------------
+            // Xử lý Modal Chọn Tuần
+            // ------------------------------------------
             openWeekModal(idx) {
                 this.currentScheduleIndex = idx;
                 const sch = this.currentSchedules[idx];
                 const selectedWeeks = sch.weeks ? sch.weeks.split(',').map(Number) : [];
-                
                 const grid = document.getElementById('weekGrid');
-                let html = '';
+                grid.innerHTML = '';
                 for(let i=1; i<=25; i++) {
                     const checked = selectedWeeks.includes(i) ? 'checked' : '';
-                    html += `
-                        <label class="flex flex-col items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors ${checked ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}">
-                            <input type="checkbox" value="${i}" class="week-cb w-4 h-4 text-blue-600 rounded mb-1" ${checked}>
-                            <span class="text-xs font-medium text-gray-700">T${i}</span>
+                    grid.innerHTML += `
+                        <label class="flex items-center gap-1.5 text-sm border p-2 rounded cursor-pointer hover:bg-blue-50 transition-colors">
+                            <input type="checkbox" value="${i}" class="week-cb w-4 h-4 text-blue-600 rounded" ${checked}> T${i}
                         </label>`;
                 }
-                grid.innerHTML = html;
-                
-                // Add event listener to visually highlight selected labels
-                document.querySelectorAll('.week-cb').forEach(cb => {
-                    cb.addEventListener('change', (e) => {
-                        const label = e.target.closest('label');
-                        if(e.target.checked) {
-                            label.classList.add('bg-blue-50', 'border-blue-300');
-                            label.classList.remove('bg-gray-50', 'border-gray-200');
-                        } else {
-                            label.classList.remove('bg-blue-50', 'border-blue-300');
-                            label.classList.add('bg-gray-50', 'border-gray-200');
-                        }
-                    });
-                });
-
                 document.getElementById('weekModal').classList.remove('hidden');
             }
 
@@ -620,7 +609,9 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 this.closeWeekModal();
             }
 
-            // Modal In Nhãn
+            // ------------------------------------------
+            // Xử lý Modal In Nhãn
+            // ------------------------------------------
             openPrintModal(id) {
                 this.currentPrintId = id;
                 document.getElementById('printModal').classList.remove('hidden');
@@ -642,47 +633,31 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 let content = '';
                 if (bag.type === 'tai_lieu') {
                     content = `
-                        <div style="font-weight:bold; font-size:12pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #333; padding-bottom: 2mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:10pt; margin-bottom: 2mm;"><b>Tên:</b> ${bag.name}</div>
-                        <div style="font-size:10pt; margin-bottom: 2mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
-                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic; color: #555;">In lúc: ${timeStr}</div>
+                        <div style="font-weight:bold; font-size:11pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #000; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
+                        <div style="font-size:9pt; margin-bottom: 1.5mm;"><b>Tên:</b> ${bag.name}</div>
+                        <div style="font-size:9pt; margin-bottom: 1.5mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic;">In lúc: ${timeStr}</div>
                     `;
                 } else {
                     let schStr = (bag.schedules || []).map(s => `${s.day} (${s.start}-${s.end})`).join(', ');
                     content = `
-                        <div style="font-weight:bold; font-size:12pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #333; padding-bottom: 2mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:10pt; margin-bottom: 1.5mm;"><b>Tên MH:</b> ${bag.name}</div>
-                        <div style="font-size:10pt; margin-bottom: 1.5mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
-                        <div style="font-size:8pt; margin-bottom: 1.5mm;"><b>Lịch học:</b> ${schStr}</div>
-                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic; color: #555;">In lúc: ${timeStr}</div>
+                        <div style="font-weight:bold; font-size:11pt; text-align:center; margin-bottom: 2mm; border-bottom: 1px dashed #000; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
+                        <div style="font-size:9pt; margin-bottom: 1mm;"><b>Tên MH:</b> ${bag.name}</div>
+                        <div style="font-size:9pt; margin-bottom: 1mm;"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div style="font-size:8pt; margin-bottom: 1mm;"><b>Lịch:</b> ${schStr}</div>
+                        <div style="font-size:7pt; margin-top: auto; text-align:right; font-style: italic;">In lúc: ${timeStr}</div>
                     `;
                 }
 
                 const printWindow = window.open('', '_blank');
                 printWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html><head>
-                    <title>In Nhãn - ${bag.code}</title>
-                    <style>
+                    <html><head><title>In Nhãn - ${bag.code}</title><style>
                         @page { size: ${w}mm ${h}mm landscape; margin: 0; }
-                        body { 
-                            margin: 0; 
-                            padding: 3mm; 
-                            width: ${w}mm; 
-                            height: ${h}mm; 
-                            box-sizing: border-box; 
-                            font-family: 'Arial', sans-serif; 
-                            display: flex; 
-                            flex-direction: column; 
-                            -webkit-print-color-adjust: exact; 
-                            print-color-adjust: exact;
-                        }
-                    </style>
-                    </head><body>
-                    ${content}
+                        body { margin: 0; padding: 2mm; width: ${w}mm; height: ${h}mm; box-sizing: border-box; font-family: sans-serif; display: flex; flex-direction: column; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+                    </style></head><body>${content}
                     <script>
                         window.onload = function() {
-                            setTimeout(() => { window.print(); window.close(); }, 500);
+                            setTimeout(() => { window.print(); window.close(); }, 300);
                         };
                     <\/script>
                     </body></html>
