@@ -18,8 +18,9 @@
             <i class="fa-regular fa-folder-open text-blue-400"></i> Kho Clearbag
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <button onclick="app.switchView('dashboard')" class="w-full text-left px-4 py-3 rounded bg-blue-600 hover:bg-blue-500"><i class="fa-solid fa-chart-pie w-6"></i> Tổng quan</button>
-            <button onclick="app.switchView('clearbags')" class="w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white"><i class="fa-solid fa-box w-6"></i> Clearbag</button>
+            <button onclick="app.switchView('dashboard')" id="nav-dashboard" class="nav-btn w-full text-left px-4 py-3 rounded bg-blue-600 text-white"><i class="fa-solid fa-chart-pie w-6"></i> Tổng quan</button>
+            <button onclick="app.switchView('clearbags')" id="nav-clearbags" class="nav-btn w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white"><i class="fa-solid fa-box w-6"></i> Clearbag</button>
+            <button onclick="app.switchView('subjects')" id="nav-subjects" class="nav-btn w-full text-left px-4 py-3 rounded text-gray-300 hover:bg-slate-700 hover:text-white"><i class="fa-solid fa-book w-6"></i> Quản lý môn học</button>
         </nav>
     </aside>
 
@@ -66,7 +67,26 @@
                     <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
                 </table>
             </div>
-
+            <!-- Subjects View (Read-only) -->
+            <div id="view-subjects" class="hidden bg-white rounded-xl shadow-sm border border-gray-200">
+                <div class="p-4 border-b border-gray-200 flex gap-4 items-center bg-gray-50 rounded-t-xl">
+                    <label class="font-bold text-gray-700">Chọn Học Kỳ:</label>
+                    <select id="filterSemester" onchange="app.renderSubjects()" class="px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700 min-w-[150px]">
+                        <!-- Sẽ render tự động qua JS -->
+                    </select>
+                </div>
+                <table class="w-full text-left">
+                    <thead class="bg-gray-100 text-gray-600 text-sm">
+                        <tr>
+                            <th class="px-6 py-3 font-medium">Mã MH</th>
+                            <th class="px-6 py-3 font-medium">Tên Môn Học (Clearbag)</th>
+                            <th class="px-6 py-3 font-medium">Lịch học</th>
+                            <th class="px-6 py-3 font-medium text-center">Học kỳ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subjectsTableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
         </div>
     </main>
 
@@ -107,15 +127,11 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Lịch học *</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <select id="scheduleDay" class="w-full px-2 py-2 border rounded outline-none text-sm">
-                                <option value="Thứ 2">Thứ 2</option><option value="Thứ 3">Thứ 3</option><option value="Thứ 4">Thứ 4</option>
-                                <option value="Thứ 5">Thứ 5</option><option value="Thứ 6">Thứ 6</option><option value="Thứ 7">Thứ 7</option>
-                                <option value="Chủ nhật">Chủ nhật</option>
-                            </select>
-                            <input type="time" id="timeStart" class="w-full px-2 py-2 border rounded outline-none text-sm" title="Giờ bắt đầu">
-                            <input type="time" id="timeEnd" class="w-full px-2 py-2 border rounded outline-none text-sm" title="Giờ kết thúc">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium text-gray-700">Lịch học *</label>
+                            <button type="button" onclick="app.addScheduleRow()" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 font-semibold"><i class="fa-solid fa-plus"></i> Thêm ngày</button>
+                        </div>
+                        <div id="scheduleContainer" class="space-y-2 max-h-32 overflow-y-auto no-scrollbar border p-2 rounded bg-white">
                         </div>
                     </div>
                 </div>
@@ -137,8 +153,9 @@
             constructor() {
                 this.bags = [];
                 this.search = '';
+                this.currentSchedules = []; // Lưu trữ mảng lịch học khi nhập
                 
-                // Cấu hình Database theo yêu cầu
+                // Cấu hình Database
                 const firebaseConfig = { 
                     databaseURL: "https://clearbag-188b6-default-rtdb.asia-southeast1.firebasedatabase.app/" 
                 };
@@ -158,22 +175,45 @@
                         });
                     }
                     this.render();
+                    this.updateSemesterFilter(); // Cập nhật dropdown ở View Môn học
                 });
 
                 document.getElementById('searchInput').addEventListener('input', (e) => {
                     this.search = e.target.value.toLowerCase();
                     this.render();
                 });
+
+                // Ép mã MH viết hoa, không dấu
+                document.getElementById('subjectCode').addEventListener('input', function(e) {
+                    let val = e.target.value;
+                    val = val.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    val = val.replace(/[^A-Za-z0-9]/g, '');
+                    e.target.value = val.toUpperCase();
+                });
             }
 
             switchView(view) {
+                // UI cập nhật nút menu
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('text-gray-300', 'hover:bg-slate-700', 'hover:text-white');
+                });
+                document.getElementById(`nav-${view}`).classList.remove('text-gray-300', 'hover:bg-slate-700');
+                document.getElementById(`nav-${view}`).classList.add('bg-blue-600', 'text-white');
+
+                // Đổi màn hình
                 document.getElementById('view-dashboard').classList.add('hidden');
                 document.getElementById('view-clearbags').classList.add('hidden');
+                document.getElementById('view-subjects').classList.add('hidden');
+                
                 document.getElementById(`view-${view}`).classList.remove('hidden');
-                document.getElementById('pageTitle').innerText = view === 'dashboard' ? 'Tổng quan' : 'Danh sách Clearbag';
+                
+                const titles = { 'dashboard': 'Tổng quan', 'clearbags': 'Danh sách Clearbag', 'subjects': 'Quản lý Môn học' };
+                document.getElementById('pageTitle').innerText = titles[view];
+
+                if(view === 'subjects') this.renderSubjects();
             }
 
-            // Hàm xử lý việc hiện/ẩn form theo loại
             toggleTypeFields() {
                 const type = document.getElementById('bagType').value;
                 const subjectFields = document.getElementById('subjectFields');
@@ -185,10 +225,9 @@
                 }
             }
 
-            // Thuật toán tính Học kỳ dựa trên thời gian thực tế
             calculateSemester() {
                 const now = new Date();
-                const month = now.getMonth() + 1; // getMonth() trả về 0-11
+                const month = now.getMonth() + 1; 
                 const year = now.getFullYear();
                 let startYearShort = '';
                 let semesterSuffix = '';
@@ -225,10 +264,14 @@
                         
                         let extraInfo = '';
                         if (bag.type === 'mon_hoc') {
+                            let scheduleHtml = '';
+                            if(bag.schedules && Array.isArray(bag.schedules)) {
+                                scheduleHtml = bag.schedules.map(s => `<div class="mt-0.5"><i class="fa-regular fa-clock w-3"></i> ${s.day}, ${s.start} - ${s.end}</div>`).join('');
+                            }
                             extraInfo = `
-                                <div class="text-xs text-gray-600">
+                                <div class="text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
                                     <span class="font-bold text-gray-800">${bag.subjectCode}</span> (HK: ${bag.semester})<br>
-                                    <i class="fa-regular fa-clock"></i> ${bag.scheduleDay}, ${bag.timeStart} - ${bag.timeEnd}
+                                    ${scheduleHtml}
                                 </div>
                             `;
                         }
@@ -236,10 +279,10 @@
                         tbody.innerHTML += `
                             <tr class="hover:bg-gray-50 border-b">
                                 <td class="px-6 py-4 font-semibold text-blue-600 align-top">${bag.code}</td>
-                                <td class="px-6 py-4 align-top">${typeLabel}</td>
-                                <td class="px-6 py-4 align-top font-medium">${bag.name}</td>
-                                <td class="px-6 py-4 align-top">${extraInfo}</td>
-                                <td class="px-6 py-4 text-center align-top">
+                                <td class="px-6 py-4 align-top whitespace-nowrap">${typeLabel}</td>
+                                <td class="px-6 py-4 align-top font-medium text-gray-800">${bag.name}</td>
+                                <td class="px-6 py-4 align-top min-w-[200px]">${extraInfo}</td>
+                                <td class="px-6 py-4 text-center align-top whitespace-nowrap">
                                     <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-2" title="Sửa"><i class="fa-solid fa-pen"></i></button>
                                     <button onclick="app.deleteBag('${bag.id}')" class="text-red-500" title="Xóa"><i class="fa-solid fa-trash"></i></button>
                                 </td>
@@ -248,16 +291,130 @@
                     }
                 });
 
-                // Cập nhật lại thẻ thống kê (Giữ nguyên cấu trúc thẻ nhưng set giá trị Value = 0 vì đã bỏ Đơn giá)
                 document.getElementById('stat-total').innerText = totalBags;
                 document.getElementById('stat-value').innerText = "N/A"; 
             }
 
+            // ------------------------------------------
+            // Tính năng Mới: VIEW Môn Học (Chỉ xem)
+            // ------------------------------------------
+            updateSemesterFilter() {
+                const select = document.getElementById('filterSemester');
+                const currentVal = select.value;
+                const semesters = [...new Set(this.bags.filter(b => b.type === 'mon_hoc' && b.semester).map(b => b.semester))].sort().reverse();
+                
+                select.innerHTML = '<option value="ALL">Tất cả học kỳ</option>';
+                semesters.forEach(hk => {
+                    select.innerHTML += `<option value="${hk}">Học kỳ ${hk}</option>`;
+                });
+                
+                if (currentVal && semesters.includes(currentVal)) select.value = currentVal;
+                else if (semesters.length > 0) select.value = semesters[0]; // Mặc định HK mới nhất
+                
+                if (document.getElementById('view-subjects').classList.contains('hidden') === false) {
+                    this.renderSubjects();
+                }
+            }
+
+            renderSubjects() {
+                const tbody = document.getElementById('subjectsTableBody');
+                tbody.innerHTML = '';
+                const hkFilter = document.getElementById('filterSemester').value;
+
+                let subjects = this.bags.filter(b => b.type === 'mon_hoc');
+                if(hkFilter !== 'ALL') {
+                    subjects = subjects.filter(b => b.semester === hkFilter);
+                }
+
+                if(subjects.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 italic">Không có môn học nào trong học kỳ này.</td></tr>`;
+                    return;
+                }
+
+                subjects.forEach(bag => {
+                    let scheduleHtml = '';
+                    if(bag.schedules && Array.isArray(bag.schedules)) {
+                        scheduleHtml = bag.schedules.map(s => `<span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded mr-1 mb-1 border border-blue-100">${s.day}, ${s.start} - ${s.end}</span>`).join('');
+                    }
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 border-b">
+                            <td class="px-6 py-4 font-bold text-gray-800">${bag.subjectCode}</td>
+                            <td class="px-6 py-4 text-gray-700">${bag.name}</td>
+                            <td class="px-6 py-4">${scheduleHtml}</td>
+                            <td class="px-6 py-4 text-center font-semibold text-blue-600">${bag.semester}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // ------------------------------------------
+            // Xử lý Lịch Học động
+            // ------------------------------------------
+            renderScheduleUI() {
+                const container = document.getElementById('scheduleContainer');
+                container.innerHTML = '';
+                if(this.currentSchedules.length === 0) {
+                    container.innerHTML = '<div class="text-xs text-gray-400 text-center italic py-2">Chưa thêm lịch học</div>';
+                    return;
+                }
+                
+                this.currentSchedules.forEach((sch, idx) => {
+                    container.innerHTML += `
+                        <div class="grid grid-cols-12 gap-1 items-center bg-gray-50 p-1.5 rounded border border-gray-200">
+                            <div class="col-span-4">
+                                <select id="schDay_${idx}" onchange="app.updateScheduleVal(${idx}, 'day', this.value)" class="w-full px-1 py-1 border rounded outline-none text-xs">
+                                    <option value="Thứ 2" ${sch.day==='Thứ 2'?'selected':''}>Thứ 2</option>
+                                    <option value="Thứ 3" ${sch.day==='Thứ 3'?'selected':''}>Thứ 3</option>
+                                    <option value="Thứ 4" ${sch.day==='Thứ 4'?'selected':''}>Thứ 4</option>
+                                    <option value="Thứ 5" ${sch.day==='Thứ 5'?'selected':''}>Thứ 5</option>
+                                    <option value="Thứ 6" ${sch.day==='Thứ 6'?'selected':''}>Thứ 6</option>
+                                    <option value="Thứ 7" ${sch.day==='Thứ 7'?'selected':''}>Thứ 7</option>
+                                    <option value="Chủ nhật" ${sch.day==='Chủ nhật'?'selected':''}>Chủ nhật</option>
+                                </select>
+                            </div>
+                            <div class="col-span-3">
+                                <input type="time" id="schStart_${idx}" value="${sch.start}" onchange="app.updateScheduleVal(${idx}, 'start', this.value)" class="w-full px-1 py-1 border rounded outline-none text-xs">
+                            </div>
+                            <div class="col-span-3">
+                                <input type="time" id="schEnd_${idx}" value="${sch.end}" onchange="app.updateScheduleVal(${idx}, 'end', this.value)" class="w-full px-1 py-1 border rounded outline-none text-xs">
+                            </div>
+                            <div class="col-span-2 text-right">
+                                <button type="button" onclick="app.removeScheduleRow(${idx})" class="text-red-500 hover:text-red-700 px-2 py-1"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            addScheduleRow() {
+                this.currentSchedules.push({ day: 'Thứ 2', start: '', end: '' });
+                this.renderScheduleUI();
+            }
+
+            removeScheduleRow(idx) {
+                this.currentSchedules.splice(idx, 1);
+                this.renderScheduleUI();
+            }
+
+            updateScheduleVal(idx, key, val) {
+                if(this.currentSchedules[idx]) {
+                    this.currentSchedules[idx][key] = val;
+                }
+            }
+
+            // ------------------------------------------
+            // Modal Tương tác
+            // ------------------------------------------
             openModal() {
                 document.getElementById('bagForm').reset();
                 document.getElementById('bagId').value = '';
                 document.getElementById('bagCode').value = this.generateRandomCode();
                 document.getElementById('modalTitle').innerText = 'Thêm Clearbag';
+                
+                this.currentSchedules = [];
+                this.renderScheduleUI();
+
                 this.toggleTypeFields();
                 document.getElementById('modal').classList.remove('hidden');
             }
@@ -277,11 +434,12 @@
                     if (bag.type === 'mon_hoc') {
                         document.getElementById('subjectCode').value = bag.subjectCode || '';
                         document.getElementById('semester').value = bag.semester || '';
-                        document.getElementById('scheduleDay').value = bag.scheduleDay || 'Thứ 2';
-                        document.getElementById('timeStart').value = bag.timeStart || '';
-                        document.getElementById('timeEnd').value = bag.timeEnd || '';
+                        this.currentSchedules = bag.schedules ? JSON.parse(JSON.stringify(bag.schedules)) : [];
+                    } else {
+                        this.currentSchedules = [];
                     }
 
+                    this.renderScheduleUI();
                     this.toggleTypeFields();
                     document.getElementById('modalTitle').innerText = 'Cập nhật Clearbag';
                     document.getElementById('modal').classList.remove('hidden');
@@ -306,15 +464,15 @@
                     const subjCode = document.getElementById('subjectCode').value.trim().toUpperCase();
                     if (subjCode.length !== 6) return alert("Mã môn học phải có đúng 6 ký tự!");
                     
-                    const timeS = document.getElementById('timeStart').value;
-                    const timeE = document.getElementById('timeEnd').value;
-                    if (!timeS || !timeE) return alert("Vui lòng chọn đầy đủ thời gian bắt đầu và kết thúc!");
+                    if (this.currentSchedules.length === 0) return alert("Vui lòng thêm ít nhất 1 buổi học!");
+                    for(let i=0; i<this.currentSchedules.length; i++) {
+                        let s = this.currentSchedules[i];
+                        if(!s.start || !s.end) return alert(`Vui lòng chọn đầy đủ thời gian ở dòng lịch học số ${i+1}`);
+                    }
 
                     dataToSave.subjectCode = subjCode;
                     dataToSave.semester = document.getElementById('semester').value;
-                    dataToSave.scheduleDay = document.getElementById('scheduleDay').value;
-                    dataToSave.timeStart = timeS;
-                    dataToSave.timeEnd = timeE;
+                    dataToSave.schedules = this.currentSchedules;
                 }
 
                 const key = idInput || codeInput;
@@ -328,7 +486,6 @@
                 }
             }
         }
-
         window.app = new ClearbagApp();
     </script>
 </body>
