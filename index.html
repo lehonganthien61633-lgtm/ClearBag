@@ -721,90 +721,103 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 this.closeWeekModal();
             }
 
-           // --- XỬ LÝ QUÉT MÃ (CAMERA SAU + NHẬP TAY) ---
+           // --- XỬ LÝ QUÉT MÃ BẰNG CAMERA ---
             openScanModal() {
-                const resultBox = document.getElementById('scanResult');
-                resultBox.className = "min-h-[80px] text-sm font-medium p-4 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center";
-                resultBox.innerHTML = "Chờ quét mã...";
-                
-                const input = document.getElementById('scanInput');
-                input.value = '';
-                document.getElementById('scanModal').classList.remove('hidden');
-                setTimeout(() => input.focus(), 100);
+                const modal = document.getElementById('scanModal');
+                modal.classList.remove('hidden');
 
-                // Sử dụng Html5Qrcode để ép dùng Camera Sau (Environment)
-                if (this.html5Qrcode) {
-                    this.html5Qrcode.clear();
-                } else {
-                    this.html5Qrcode = new Html5Qrcode("reader");
+                // Nếu đang chạy thì không khởi tạo lại để tránh đơ
+                if (this.html5QrcodeScanner && this.html5QrcodeScanner.getState() === 2) {
+                    return;
                 }
-                
+
+                // Luôn tạo một instance mới mỗi lần mở để quét mượt hơn
+                this.html5QrcodeScanner = new Html5Qrcode("reader");
                 const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
                 
-                // Cố gắng mở Camera sau (facingMode: "environment")
-                this.html5Qrcode.start(
+                this.html5QrcodeScanner.start(
                     { facingMode: "environment" }, 
                     config, 
                     (decodedText) => {
-                        // Thành công khi quét qua Camera
+                        // Kêu bíp nhẹ
+                        try {
+                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                            const osc = ctx.createOscillator();
+                            osc.connect(ctx.destination);
+                            osc.frequency.value = 1200;
+                            osc.start();
+                            setTimeout(() => osc.stop(), 100);
+                        } catch(e) {}
+
+                        // Tạm dừng quét
+                        if (this.html5QrcodeScanner.getState() === 2) { // 2 = SCANNING
+                            this.html5QrcodeScanner.pause(true);
+                        }
+
+                        // Xử lý kiểm tra túi
                         this.checkBagForToday(decodedText);
-                        
-                        // Tạm dừng 3 giây để người dùng xem kết quả, sau đó quét tiếp
-                        this.html5Qrcode.pause();
-                        setTimeout(() => {
-                            if (this.html5Qrcode && this.html5Qrcode.getState() === Html5QrcodeScannerState.PAUSED) {
-                                this.html5Qrcode.resume();
-                                document.getElementById('scanResult').innerHTML = "Tiếp tục đưa mã vào khung camera...";
-                                document.getElementById('scanResult').className = "min-h-[80px] text-sm font-medium p-4 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center";
-                            }
-                        }, 3000);
                     },
                     (errorMessage) => {
-                        // Bỏ qua lỗi không tìm thấy QR trong khung hình
+                        // Bỏ qua lỗi ồn (noise error)
                     }
                 ).catch((err) => {
-                    console.log("Không thể mở Camera sau, có thể thiết bị không hỗ trợ:", err);
-                    document.getElementById('scanResult').innerHTML = "Không thể mở Camera. Vui lòng cấp quyền hoặc nhập tay.";
+                    console.log("Lỗi Camera:", err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi truy cập Camera',
+                        text: 'Trình duyệt không tìm thấy camera hoặc bị từ chối quyền truy cập.'
+                    });
+                    this.closeScanModal();
                 });
             }
 
             closeScanModal() {
                 document.getElementById('scanModal').classList.add('hidden');
-                // Tắt camera khi đóng modal
-                if (this.html5Qrcode) {
-                    this.html5Qrcode.stop().then(() => {
-                        this.html5Qrcode.clear();
-                    }).catch(err => console.log("Lỗi tắt camera:", err));
+                if (this.html5QrcodeScanner) {
+                    // Dùng Promise để đảm bảo stop hoàn toàn
+                    this.html5QrcodeScanner.stop().then(() => {
+                        this.html5QrcodeScanner.clear();
+                        this.html5QrcodeScanner = null;
+                    }).catch(err => {
+                        console.log("Failed to stop scanner:", err);
+                        this.html5QrcodeScanner = null;
+                    });
                 }
             }
 
             checkBagForToday(bagCode) {
                 const cleanCode = bagCode.trim().toUpperCase();
-                if (!cleanCode) return;
-
                 const bag = this.bags.find(b => b.code.toUpperCase() === cleanCode);
-                const resultBox = document.getElementById('scanResult');
-                document.getElementById('scanInput').value = ''; 
                 
-                // Kêu bíp nhẹ nếu trình duyệt hỗ trợ
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    osc.connect(ctx.destination);
-                    osc.frequency.value = 1200;
-                    osc.start();
-                    setTimeout(() => osc.stop(), 100);
-                } catch(e) {}
+                const swalConfig = {
+                    confirmButtonText: 'Quét tiếp',
+                    confirmButtonColor: '#3085d6',
+                    allowOutsideClick: false,
+                    willClose: () => {
+                        // Resume quét sau khi tắt popup
+                        if (this.html5QrcodeScanner && this.html5QrcodeScanner.getState() === 3) { // 3 = PAUSED
+                            this.html5QrcodeScanner.resume();
+                        }
+                    }
+                };
 
                 if (!bag) {
-                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-red-100 text-red-700 border border-red-300 flex flex-col items-center justify-center text-center shadow-inner";
-                    resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mb-1 text-2xl"></i> Không tìm thấy mã:<br><span class="font-mono text-lg mt-1">${cleanCode}</span>`;
+                    Swal.fire({
+                        ...swalConfig,
+                        icon: 'error',
+                        title: 'TÚI KHÔNG TỒN TẠI',
+                        html: `Mã <b>${cleanCode}</b> không có trong hệ thống!`
+                    });
                     return;
                 }
 
                 if (bag.type === 'tai_lieu') {
-                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
-                    resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU CHUNG<br><span class="text-base mt-1">${bag.name}</span>`;
+                    Swal.fire({
+                        ...swalConfig,
+                        icon: 'info',
+                        title: 'TÀI LIỆU CHUNG',
+                        text: bag.name
+                    });
                     return;
                 }
 
@@ -815,7 +828,6 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 if (bag.schedules && bag.schedules.length > 0) {
                     for(let sch of bag.schedules) {
                         const validWeeks = this.parseWeeks(sch.weeks);
-                        // Chỉ kiểm tra đúng Ngày và nằm trong Tuần quy định (bỏ qua kiểm tra giờ giấc để nới lỏng)
                         if (sch.day === currentDay && validWeeks.includes(currentWeek)) {
                             isCorrectForToday = true;
                             break;
@@ -824,14 +836,27 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 }
 
                 if (isCorrectForToday) {
-                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-green-100 text-green-800 border border-green-400 flex flex-col items-center justify-center text-center shadow-inner scale-105 transition-transform";
-                    resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${bag.name} (${bag.subjectCode})</span>`;
+                    Swal.fire({
+                        ...swalConfig,
+                        icon: 'success',
+                        title: 'ĐÚNG MÔN HỌC',
+                        html: `
+                            <div class="text-xl font-bold text-green-700 mb-2">${bag.name}</div>
+                            <div class="text-sm">Hôm nay có lịch học môn này!</div>
+                        `
+                    });
                 } else {
-                    resultBox.className = "min-h-[80px] text-sm font-bold p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-400 flex flex-col items-center justify-center text-center shadow-inner";
-                    resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Môn này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${bag.name}`;
+                    Swal.fire({
+                        ...swalConfig,
+                        icon: 'warning',
+                        title: 'SAI LỊCH MÔN HỌC!',
+                        html: `
+                            <div class="text-lg font-bold text-red-600 mb-2">${bag.name}</div>
+                            <div class="text-sm">Môn này <b>KHÔNG CÓ</b> lịch vào <b>${currentDay}</b> (Tuần ${currentWeek}).</div>
+                        `
+                    });
                 }
             }
-
             // --- XỬ LÝ IN ẤN ---
             openPrintModal(id) {
                 this.currentPrintId = id;
