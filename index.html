@@ -169,19 +169,29 @@
         </div>
     </div>
 
-    <!-- THIẾT KẾ BỊ THIẾU: Modal Chọn Tuần -->
+    <!-- Modal Chọn Tuần Học -->
     <div id="weekModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-xs">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h4 class="font-bold text-lg text-gray-800">Chọn tuần học</h4>
+                <h4 class="font-bold text-lg text-gray-800">Nhập tuần học</h4>
                 <span id="weekModalSemester" class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">HK: N/A</span>
             </div>
-            <div id="weekGrid" class="grid grid-cols-5 gap-2 mb-6">
-                <!-- Grid rendered by JS -->
+            
+            <div class="flex items-center gap-3 mb-6">
+                <div class="flex-1">
+                    <label class="block text-xs text-gray-500 mb-1">Từ tuần</label>
+                    <input type="number" id="weekStart" min="1" max="52" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 font-semibold" placeholder="VD: 1">
+                </div>
+                <div class="text-gray-400 font-bold mt-4">-</div>
+                <div class="flex-1">
+                    <label class="block text-xs text-gray-500 mb-1">Đến tuần</label>
+                    <input type="number" id="weekEnd" min="1" max="52" class="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 font-semibold" placeholder="VD: 15">
+                </div>
             </div>
+            
             <div class="flex justify-end gap-3">
                 <button onclick="app.closeWeekModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Hủy</button>
-                <button onclick="app.saveWeeks()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">Xác nhận</button>
+                <button onclick="app.saveWeeks()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">Lưu tuần</button>
             </div>
         </div>
     </div>
@@ -581,59 +591,26 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 }
             }
 
+            // ------------------------------------------
+            // Xử lý Modal Chọn Tuần (Nhập tay)
+            // ------------------------------------------
             openWeekModal(idx) {
                 this.currentScheduleIndex = idx;
                 const sch = this.currentSchedules[idx];
-                const selectedWeeks = sch.weeks ? sch.weeks.split(',').map(Number) : [];
                 
                 const currentSemester = document.getElementById('semester').value;
                 document.getElementById('weekModalSemester').innerText = `HK: ${currentSemester || 'N/A'}`;
 
-                // Thuật toán tính tuần ISO 8601 chính xác
-                const getISOWeek = (date) => {
-                    const target = new Date(date.valueOf());
-                    const dayNr = (date.getDay() + 6) % 7;
-                    target.setDate(target.getDate() - dayNr + 3);
-                    const firstThursday = target.valueOf();
-                    target.setMonth(0, 1);
-                    if (target.getDay() !== 4) {
-                        target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-                    }
-                    return 1 + Math.ceil((firstThursday - target) / 604800000);
-                };
-
-                const currentISOWeek = getISOWeek(new Date());
-
-                // Hiển thị 20 tuần gần nhất, lùi lại 3 tuần so với tuần hiện tại
-                const startWeek = Math.max(1, currentISOWeek - 3);
-                // Giới hạn không vượt quá 52 tuần của một năm
-                const endWeek = Math.min(52, startWeek + 19);
-
-                const grid = document.getElementById('weekGrid');
-                let html = '';
-                for(let i = startWeek; i <= endWeek; i++) {
-                    const checked = selectedWeeks.includes(i) ? 'checked' : '';
-                    const isCurrent = i === currentISOWeek ? 'ring-2 ring-red-400' : '';
-                    html += `
-                        <label class="flex flex-col items-center justify-center p-2 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors ${checked ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'} ${isCurrent}" title="${i === currentISOWeek ? 'Tuần hiện tại' : ''}">
-                            <input type="checkbox" value="${i}" class="week-cb w-4 h-4 text-blue-600 rounded mb-1" ${checked}>
-                            <span class="text-xs font-medium text-gray-700">T${i}</span>
-                        </label>`;
+                // Phân tích chuỗi "1-15" (nếu có) để điền lại vào form
+                let startW = '', endW = '';
+                if (sch.weeks && sch.weeks.includes('-')) {
+                    const parts = sch.weeks.split('-');
+                    startW = parts[0];
+                    endW = parts[1];
                 }
-                grid.innerHTML = html;
-                
-                document.querySelectorAll('.week-cb').forEach(cb => {
-                    cb.addEventListener('change', (e) => {
-                        const label = e.target.closest('label');
-                        if(e.target.checked) {
-                            label.classList.add('bg-blue-50', 'border-blue-300');
-                            label.classList.remove('bg-gray-50', 'border-gray-200');
-                        } else {
-                            label.classList.remove('bg-blue-50', 'border-blue-300');
-                            label.classList.add('bg-gray-50', 'border-gray-200');
-                        }
-                    });
-                });
+
+                document.getElementById('weekStart').value = startW;
+                document.getElementById('weekEnd').value = endW;
 
                 document.getElementById('weekModal').classList.remove('hidden');
             }
@@ -644,17 +621,27 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
             }
 
             saveWeeks() {
-                // Khắc phục lỗi đơ: Kiểm tra tồn tại Index
                 if (this.currentScheduleIndex === null || this.currentScheduleIndex === undefined) {
                     this.closeWeekModal();
                     return;
                 }
-                const cbs = document.querySelectorAll('.week-cb:checked');
-                const weeks = Array.from(cbs).map(cb => cb.value).join(',');
                 
-                // Cập nhật lại array
+                const sW = document.getElementById('weekStart').value;
+                const eW = document.getElementById('weekEnd').value;
+                
+                let weekString = '';
+                if (sW && eW) {
+                    if (parseInt(sW) > parseInt(eW)) {
+                        alert("Tuần bắt đầu không được lớn hơn tuần kết thúc!");
+                        return;
+                    }
+                    weekString = `${sW}-${eW}`;
+                } else if (sW || eW) {
+                    weekString = sW || eW; // Chỉ nhập 1 ô
+                }
+                
                 if (this.currentSchedules[this.currentScheduleIndex]) {
-                    this.currentSchedules[this.currentScheduleIndex].weeks = weeks;
+                    this.currentSchedules[this.currentScheduleIndex].weeks = weekString;
                 }
                 
                 this.renderScheduleUI();
@@ -682,28 +669,26 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const now = new Date();
                 const timeStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
-                // Tính toán chiều rộng an toàn (trừ hao 2mm để chống lẹm lề máy in nhiệt)
-                const safeW = parseInt(w) - 2;
-                const safeH = parseInt(h) - 2;
-
                 let content = '';
                 if (bag.type === 'tai_lieu') {
-                    // Thu nhỏ cho Tài Liệu, cho phép xuống dòng
                     content = `
-                        <div style="font-weight:bold; font-size:9pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">BÌA ĐỰNG TÀI LIỆU</div>
-                        <div style="font-size:7pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.15; flex-grow: 1; word-break: break-word; white-space: normal;"><b>Tên:</b> ${bag.name}</div>
-                        <div style="font-size:7.5pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace; font-weight:bold;">${bag.code}</span></div>
-                        <div style="font-size:5.5pt; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
+                        <div class="print-title">BÌA ĐỰNG TÀI LIỆU</div>
+                        <div class="print-row"><b>Tên:</b> ${bag.name}</div>
+                        <div class="print-row"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div class="print-footer">In: ${timeStr}</div>
                     `;
                 } else {
-                    // Thu nhỏ cho Môn Học, cho phép xuống dòng
-                    let schStr = (bag.schedules || []).map(s => `${s.day} (${s.start.replace(':00', 'h')})`).join(', ');
+                    let schStr = (bag.schedules || []).map(s => {
+                        let wStr = s.weeks ? ` T${s.weeks}` : '';
+                        return `${s.day} (${s.start.replace(':00', 'h')})${wStr}`;
+                    }).join(', ');
+                    
                     content = `
-                        <div style="font-weight:bold; font-size:9pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">BÌA TÀI LIỆU</div>
-                        <div style="font-size:7pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.15; max-height: 3.5em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word; white-space: normal;"><b>MH:</b> ${bag.name}</div>
-                        <div style="font-size:7.5pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã túi:</b> <span style="font-family: monospace; font-weight:bold;">${bag.code}</span></div>
-                        <div style="font-size:6.5pt; margin-bottom: 1mm; padding: 0 0.5mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; white-space: normal;"><b>Lịch:</b> ${schStr}</div>
-                        <div style="font-size:5.5pt; margin-top: auto; text-align:right; font-style: italic; color: #555; padding-top: 0.5mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
+                        <div class="print-title">BÌA TÀI LIỆU</div>
+                        <div class="print-row truncate-text"><b>MH:</b> ${bag.name}</div>
+                        <div class="print-row"><b>Mã túi:</b> <span style="font-family: monospace;">${bag.code}</span></div>
+                        <div class="print-row truncate-text"><b>Lịch:</b> ${schStr}</div>
+                        <div class="print-footer">In: ${timeStr}</div>
                     `;
                 }
 
@@ -713,21 +698,58 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     <html><head>
                     <title>In Nhãn - ${bag.code}</title>
                     <style>
-                        /* Reset hoàn toàn margin/padding của trình duyệt */
-                        @page { size: ${w}mm ${h}mm landscape; margin: 0 !important; }
-                        html, body { margin: 0; padding: 0; width: ${w}mm; height: ${h}mm; background: #fff; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+                        /* Set đúng khổ giấy cho máy in nhiệt, tắt margin mặc định */
+                        @page { size: ${w}mm ${h}mm landscape; margin: 0; }
                         
-                        /* Frame nhãn in nhỏ hơn khổ giấy thực tế để chống lẹm */
+                        html, body { 
+                            margin: 0; 
+                            padding: 0; 
+                            width: ${w}mm; 
+                            height: ${h}mm; 
+                            background: #fff; 
+                            overflow: hidden; /* Cắt đứt mọi thứ lố ra ngoài */
+                        }
+                        
+                        /* Khung chứa nội dung thu nhỏ lại 92% so với giấy để tránh lẹm */
                         .label-container {
-                            width: ${safeW}mm; 
-                            height: ${safeH}mm; 
+                            width: 92%; 
+                            height: 94%; 
+                            margin: 2% auto; /* Canh giữa */
                             box-sizing: border-box; 
-                            padding: 1mm 1.5mm;
                             font-family: 'Arial', sans-serif; 
                             display: flex; 
-                            flex-direction: column; 
-                            -webkit-print-color-adjust: exact; 
-                            print-color-adjust: exact;
+                            flex-direction: column;
+                        }
+
+                        /* Các Class dùng chung để tối ưu không gian */
+                        .print-title {
+                            font-weight: bold; 
+                            font-size: 8pt; 
+                            text-align: center; 
+                            margin-bottom: 2%; 
+                            border-bottom: 1px dashed #333; 
+                            padding-bottom: 1%;
+                        }
+                        .print-row {
+                            font-size: 7.5pt; 
+                            margin-bottom: 2%; 
+                            line-height: 1.1; 
+                            word-break: break-word;
+                        }
+                        .print-footer {
+                            font-size: 5.5pt; 
+                            margin-top: auto; 
+                            text-align: right; 
+                            font-style: italic; 
+                            color: #333; 
+                            padding-top: 1%; 
+                            border-top: 1px dashed #ccc;
+                        }
+                        .truncate-text {
+                            display: -webkit-box;
+                            -webkit-line-clamp: 2; /* Tối đa 2 dòng */
+                            -webkit-box-orient: vertical;
+                            overflow: hidden;
                         }
                     </style>
                     </head><body>
@@ -736,7 +758,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                         </div>
                     <script>
                         window.onload = function() {
-                            setTimeout(() => { window.print(); window.close(); }, 500);
+                            setTimeout(() => { window.print(); window.close(); }, 300);
                         };
                     <\/script>
                     </body></html>
