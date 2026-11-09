@@ -15,10 +15,10 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 flex h-screen overflow-hidden">
+<body class="bg-gray-50 text-gray-800 flex h-screen overflow-hidden relative">
 
-    <!-- Sidebar Overlay for Mobile -->
-    <div id="sidebarOverlay" onclick="app.toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+    <!-- Sidebar Overlay for Mobile: Đã sửa lỗi đè layer gây đơ màn hình -->
+    <div id="sidebarOverlay" onclick="app.toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden pointer-events-auto"></div>
 
     <!-- Sidebar -->
     <aside id="sidebar" class="bg-slate-800 text-white w-64 flex-col fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 flex">
@@ -344,8 +344,12 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             // --- GIAO DIỆN & TƯƠNG TÁC CHÍNH ---
             toggleSidebar() {
+                // Chỉ chạy trên giao diện mobile (màn hình nhỏ hơn 768px)
+                if (window.innerWidth >= 768) return; 
+                
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
+                
                 if (sidebar.classList.contains('-translate-x-full')) {
                     sidebar.classList.remove('-translate-x-full');
                     overlay.classList.remove('hidden');
