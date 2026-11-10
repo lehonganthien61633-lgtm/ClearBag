@@ -257,6 +257,38 @@
             </div>
         </div>
     </div>
+    <!-- Modal Chi tiết Nội dung Túi (Tài liệu) -->
+    <div id="bagDetailsModal" class="fixed inset-0 bg-black/60 z-[75] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4 border-b pb-2 shrink-0">
+                <h4 class="font-bold text-lg text-gray-800" id="bagDetailsTitle">Nội dung túi</h4>
+                <button onclick="app.closeBagDetails()" class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form class="flex gap-2 mb-4 shrink-0" onsubmit="app.addDocument(); return false;">
+                <input type="text" id="newDocName" required class="flex-1 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nhập tên tài liệu mới...">
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm whitespace-nowrap"><i class="fa-solid fa-plus md:mr-1"></i> <span class="hidden md:inline">Thêm tài liệu</span></button>
+            </form>
+
+            <div class="flex-1 overflow-auto border rounded-lg no-scrollbar">
+                <table class="w-full text-left whitespace-nowrap text-sm">
+                    <thead class="bg-gray-100 text-gray-600 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="px-3 py-2 font-medium w-10 text-center">STT</th>
+                            <th class="px-3 py-2 font-medium">Tên tài liệu</th>
+                            <th class="px-3 py-2 font-medium">Mã TL</th>
+                            <th class="px-3 py-2 font-medium">Ngày thêm</th>
+                            <th class="px-3 py-2 font-medium text-center">In tem</th>
+                            <th class="px-3 py-2 font-medium text-center">Xóa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docsTableBody" class="divide-y divide-gray-100 bg-white">
+                        <!-- Documents rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <!-- Firebase Script -->
     <script type="module">
@@ -292,6 +324,9 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     }
                     this.render();
                     this.updateSemesterFilter(); 
+                    if (this.currentBagDetailsId && !document.getElementById('bagDetailsModal').classList.contains('hidden')) {
+                        this.renderDocuments();
+                    }
                 });
 
                 document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -444,7 +479,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                             <tr class="hover:bg-gray-50 border-b">
                                 <td class="px-4 md:px-6 py-3 font-semibold text-blue-600 align-top">${bag.code}</td>
                                 <td class="px-4 md:px-6 py-3 align-top">${typeLabel}</td>
-                                <td class="px-4 md:px-6 py-3 align-top font-medium text-gray-800 truncate max-w-[150px] md:max-w-none" title="${bag.name}">${bag.name}</td>
+                                <td class="px-4 md:px-6 py-3 align-top font-bold text-blue-700 truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem nội dung tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
                                 <td class="px-4 md:px-6 py-3 align-top min-w-[200px] hidden sm:table-cell">${extraInfo}</td>
                                 <td class="px-4 md:px-6 py-3 text-center align-top whitespace-nowrap">
                                     <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 p-1.5 md:px-2 md:py-1 rounded mx-0.5" title="In nhãn"><i class="fa-solid fa-print"></i></button>
@@ -506,7 +541,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     return `
                         <tr class="hover:bg-gray-50 border-b transition-colors">
                             <td class="px-4 md:px-6 py-3 font-bold text-gray-800">${bag.subjectCode || 'N/A'}</td>
-                            <td class="px-4 md:px-6 py-3 text-gray-700 font-medium truncate max-w-[150px] md:max-w-none" title="${bag.name}">${bag.name}</td>
+                            <td class="px-4 md:px-6 py-3 text-blue-700 font-bold truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem nội dung tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
                             <td class="px-4 md:px-6 py-3 hidden sm:table-cell">${scheduleHtml}</td>
                             <td class="px-4 md:px-6 py-3 text-center font-bold text-blue-600 bg-gray-50/50">${bag.semester || 'N/A'}</td>
                         </tr>
@@ -923,6 +958,154 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 `);
                 printWindow.document.close();
                 this.closePrintModal();
+            }
+            // --- QUẢN LÝ TÀI LIỆU TRONG TÚI ---
+            openBagDetails(id) {
+                this.currentBagDetailsId = id;
+                const bag = this.bags.find(b => b.id === id);
+                if (!bag) return;
+                
+                document.getElementById('bagDetailsTitle').innerHTML = `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i>Nội dung: ${bag.name}`;
+                this.renderDocuments();
+                document.getElementById('bagDetailsModal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('newDocName').focus(), 100);
+            }
+
+            closeBagDetails() {
+                document.getElementById('bagDetailsModal').classList.add('hidden');
+                this.currentBagDetailsId = null;
+                document.getElementById('newDocName').value = '';
+            }
+
+            renderDocuments() {
+                const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
+                const tbody = document.getElementById('docsTableBody');
+                if (!bag || !bag.documents || bag.documents.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500 italic">Túi trống. Chưa có tài liệu nào.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = bag.documents.map((doc, idx) => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-3 py-3 text-center font-semibold text-gray-500">${idx + 1}</td>
+                        <td class="px-3 py-3 font-medium text-gray-800 whitespace-normal min-w-[150px]">${doc.name}</td>
+                        <td class="px-3 py-3 text-blue-600 font-mono text-xs font-bold">${doc.code}</td>
+                        <td class="px-3 py-3 text-gray-500 text-xs">${doc.dateAdded}</td>
+                        <td class="px-3 py-3 text-center">
+                            <button onclick="app.printDocument('${doc.id}', 'label')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded mx-0.5" title="In nhãn thông tin"><i class="fa-solid fa-tag"></i></button>
+                            <button onclick="app.printDocument('${doc.id}', 'qr')" class="text-purple-600 bg-purple-50 hover:bg-purple-100 px-2 py-1.5 rounded mx-0.5" title="In mã QR Tên Túi"><i class="fa-solid fa-qrcode"></i></button>
+                        </td>
+                        <td class="px-3 py-3 text-center">
+                            <button onclick="app.deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            async addDocument() {
+                const input = document.getElementById('newDocName');
+                const name = input.value.trim();
+                if (!name) return;
+
+                const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
+                if (!bag) return;
+
+                const now = new Date();
+                const dateStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
+                
+                // Sinh mã tài liệu ngẫu nhiên
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let randomCode = 'TL-';
+                for(let i=0; i<6; i++) randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+
+                const newDoc = {
+                    id: 'DOC-' + Date.now(),
+                    name: name,
+                    code: randomCode,
+                    dateAdded: dateStr
+                };
+
+                const updatedDocs = bag.documents ? [...bag.documents, newDoc] : [newDoc];
+                
+                try {
+                    await set(ref(this.db, `clearbags/${bag.id}/documents`), updatedDocs);
+                    input.value = '';
+                } catch (e) {
+                    Swal.fire('Lỗi!', 'Không thể lưu tài liệu: ' + e.message, 'error');
+                }
+            }
+
+            async deleteDocument(docId) {
+                if (!confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) return;
+                const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
+                if (!bag) return;
+
+                const updatedDocs = bag.documents.filter(d => d.id !== docId);
+                await set(ref(this.db, `clearbags/${bag.id}/documents`), updatedDocs);
+            }
+
+            printDocument(docId, type) {
+                const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
+                const doc = bag.documents.find(d => d.id === docId);
+                if (!bag || !doc) return;
+
+                const now = new Date();
+                const timeStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                
+                const w = 40, h = 30; // In kích thước tem nhỏ 40x30
+                const safeW = w - 2, safeH = h - 2;
+
+                let content = '';
+                if (type === 'label') {
+                    content = `
+                        <div style="font-weight:bold; font-size:8pt; text-align:center; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 1mm;">NHÃN TÀI LIỆU</div>
+                        <div style="font-size:7pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.15; flex-grow: 1; word-break: break-word; white-space: normal;"><b>Tên:</b> ${doc.name}</div>
+                        <div style="font-size:7.5pt; margin-bottom: 1.5mm; padding: 0 0.5mm; line-height: 1.1;"><b>Mã TL:</b> <span style="font-family: monospace; font-weight:bold;">${doc.code}</span></div>
+                        <div style="font-size:5.5pt; text-align:right; font-style: italic; color: #555; padding-top: 1mm; border-top: 1px dashed #ccc;">In: ${timeStr}</div>
+                    `;
+                } else if (type === 'qr') {
+                    // QR chứa TÊN TÚI THEO YÊU CẦU
+                    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(bag.name)}&margin=0`;
+                    content = `
+                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%;">
+                            <img src="${qrApiUrl}" style="max-width: 75%; max-height: 75%; object-fit: contain;">
+                            <div style="font-size: 6pt; font-weight: bold; margin-top: 1.5mm; text-align:center; word-break: break-word; line-height:1.1; overflow:hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${bag.name}</div>
+                        </div>
+                    `;
+                }
+
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html><head>
+                    <title>In TL - ${doc.code}</title>
+                    <style>
+                        @page { size: ${w}mm ${h}mm landscape; margin: 0 !important; }
+                        html, body { margin: 0; padding: 0; width: ${w}mm; height: ${h}mm; background: #fff; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+                        .label-container {
+                            width: ${safeW}mm; 
+                            height: ${safeH}mm; 
+                            box-sizing: border-box; 
+                            padding: 1mm 1.5mm;
+                            font-family: 'Arial', sans-serif; 
+                            display: flex; 
+                            flex-direction: column; 
+                            -webkit-print-color-adjust: exact; 
+                            print-color-adjust: exact;
+                        }
+                    </style>
+                    </head><body>
+                        <div class="label-container">
+                            ${content}
+                        </div>
+                    <script>
+                        window.onload = function() {
+                            setTimeout(() => { window.print(); window.close(); }, 500);
+                        };
+                    <\/script>
+                    </body></html>
+                `);
+                printWindow.document.close();
             }
         }
         
