@@ -401,6 +401,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             // --- GIAO DIỆN & TƯƠNG TÁC CHÍNH ---
             toggleSidebar() {
+                if (window.innerWidth >= 768) return; 
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
                 if (sidebar.classList.contains('-translate-x-full')) {
@@ -433,47 +434,59 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
             }
 
             toggleTypeFields() {
-                const type = document.getElementById('bagType').value;
-                const dynamicFields = document.getElementById('dynamicFields');
-                const subjectInfoFields = document.getElementById('subjectInfoFields');
-                const scheduleWrapper = document.getElementById('scheduleWrapper');
-                
-                const docScheduleLabel = document.getElementById('docScheduleLabel');
-                const hasDocSchedule = document.getElementById('hasDocSchedule').checked;
-                
-                const subSubjectInput = document.getElementById('subSubjectCode');
-                const hasSubSubject = document.getElementById('hasSubSubject').checked;
+                try {
+                    const type = document.getElementById('bagType').value;
+                    const dynamicFields = document.getElementById('dynamicFields');
+                    const subjectInfoFields = document.getElementById('subjectInfoFields');
+                    const scheduleWrapper = document.getElementById('scheduleWrapper');
+                    
+                    const docScheduleLabel = document.getElementById('docScheduleLabel');
+                    const hasDocScheduleEl = document.getElementById('hasDocSchedule');
+                    const hasDocSchedule = hasDocScheduleEl ? hasDocScheduleEl.checked : false;
+                    
+                    const subSubjectInput = document.getElementById('subSubjectCode');
+                    const hasSubSubjectEl = document.getElementById('hasSubSubject');
+                    const hasSubSubject = hasSubSubjectEl ? hasSubSubjectEl.checked : false;
 
-                if (type === 'mon_hoc') {
-                    // Môn học: Tắt checkbox Lịch Tài Liệu, Bật toàn bộ khung Lịch & Môn
-                    docScheduleLabel.classList.add('hidden');
-                    document.getElementById('hasDocSchedule').checked = false;
-                    
-                    dynamicFields.classList.remove('hidden');
-                    subjectInfoFields.classList.remove('hidden');
-                    scheduleWrapper.classList.remove('hidden');
-                    document.getElementById('semester').value = this.calculateSemester();
-                    
-                    // Logic môn phụ
-                    if (hasSubSubject) subSubjectInput.classList.remove('hidden');
-                    else {
-                        subSubjectInput.classList.add('hidden');
-                        subSubjectInput.value = '';
-                    }
-                } else {
-                    // Tài liệu: Hiện checkbox Lịch Tài Liệu, Ẩn phần mã Môn Học
-                    docScheduleLabel.classList.remove('hidden');
-                    docScheduleLabel.classList.add('flex');
-                    subjectInfoFields.classList.add('hidden');
-                    
-                    // Logic hiển thị lịch cho Tài liệu
-                    if (hasDocSchedule) {
-                        dynamicFields.classList.remove('hidden');
-                        scheduleWrapper.classList.remove('hidden');
+                    if (type === 'mon_hoc') {
+                        // Môn học: Tắt checkbox Lịch Tài Liệu, Bật toàn bộ khung Lịch & Môn
+                        if (docScheduleLabel) docScheduleLabel.classList.add('hidden');
+                        if (hasDocScheduleEl) hasDocScheduleEl.checked = false;
+                        
+                        if (dynamicFields) dynamicFields.classList.remove('hidden');
+                        if (subjectInfoFields) subjectInfoFields.classList.remove('hidden');
+                        if (scheduleWrapper) scheduleWrapper.classList.remove('hidden');
+                        
+                        const semesterEl = document.getElementById('semester');
+                        if (semesterEl) semesterEl.value = this.calculateSemester();
+                        
+                        // Logic môn phụ
+                        if (subSubjectInput) {
+                            if (hasSubSubject) subSubjectInput.classList.remove('hidden');
+                            else {
+                                subSubjectInput.classList.add('hidden');
+                                subSubjectInput.value = '';
+                            }
+                        }
                     } else {
-                        dynamicFields.classList.add('hidden');
-                        scheduleWrapper.classList.add('hidden');
+                        // Tài liệu: Hiện checkbox Lịch Tài Liệu, Ẩn phần mã Môn Học
+                        if (docScheduleLabel) {
+                            docScheduleLabel.classList.remove('hidden');
+                            docScheduleLabel.classList.add('flex');
+                        }
+                        if (subjectInfoFields) subjectInfoFields.classList.add('hidden');
+                        
+                        // Logic hiển thị lịch cho Tài liệu
+                        if (hasDocSchedule) {
+                            if (dynamicFields) dynamicFields.classList.remove('hidden');
+                            if (scheduleWrapper) scheduleWrapper.classList.remove('hidden');
+                        } else {
+                            if (dynamicFields) dynamicFields.classList.add('hidden');
+                            if (scheduleWrapper) scheduleWrapper.classList.add('hidden');
+                        }
                     }
+                } catch(e) {
+                    console.error("Lỗi giao diện form:", e);
                 }
             }
 
