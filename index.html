@@ -270,7 +270,7 @@
                 <button onclick="app.closeBagDetails()" class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <form class="mb-4 shrink-0 bg-gray-50 p-3 rounded-lg border border-gray-200" onsubmit="app.addDocument(); return false;">
+            <form class="mb-4 shrink-0 bg-gray-50 p-3 rounded-lg border border-gray-200" onsubmit="event.preventDefault(); app.addDocument();">
                 <div class="flex gap-2 items-start">
                     <div class="flex-1 flex flex-col gap-2">
                         <input type="text" id="newDocName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nhập tên tài liệu mới...">
@@ -1103,86 +1103,116 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const bag = this.bags.find(b => b.id === id);
                 if (!bag) return;
                 
-                document.getElementById('bagDetailsTitle').innerHTML = `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i>Nội dung: ${bag.name}`;
+                // Dùng querySelectorAll đề phòng trường hợp file HTML bị trùng lặp modal
+                document.querySelectorAll('#bagDetailsTitle').forEach(el => {
+                    el.innerHTML = `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i>Nội dung: ${bag.name}`;
+                });
+                
                 this.renderDocuments();
-                document.getElementById('bagDetailsModal').classList.remove('hidden');
-                setTimeout(() => document.getElementById('newDocName').focus(), 100);
+                
+                document.querySelectorAll('#bagDetailsModal').forEach(el => el.classList.remove('hidden'));
+                setTimeout(() => {
+                    const input = document.getElementById('newDocName');
+                    if(input) input.focus();
+                }, 100);
             }
 
             closeBagDetails() {
-                document.getElementById('bagDetailsModal').classList.add('hidden');
+                document.querySelectorAll('#bagDetailsModal').forEach(el => el.classList.add('hidden'));
                 this.currentBagDetailsId = null;
-                document.getElementById('newDocName').value = '';
-                document.getElementById('newDocContent').value = '';
-                document.getElementById('hasDocContent').checked = false;
-                document.getElementById('docContentWrapper').classList.add('hidden');
+                
+                const inputName = document.getElementById('newDocName');
+                const inputContent = document.getElementById('newDocContent');
+                const hasContent = document.getElementById('hasDocContent');
+                const wrapper = document.getElementById('docContentWrapper');
+                
+                if (inputName) inputName.value = '';
+                if (inputContent) inputContent.value = '';
+                if (hasContent) hasContent.checked = false;
+                if (wrapper) wrapper.classList.add('hidden');
             }
 
             renderDocuments() {
                 const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
-                const tbody = document.getElementById('docsTableBody');
-                if (!bag || !bag.documents || bag.documents.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500 italic">Túi trống. Chưa có tài liệu nào.</td></tr>`;
-                    return;
-                }
+                const tbodyList = document.querySelectorAll('#docsTableBody');
+                
+                // LUÔN BẢO VỆ MẢNG: Tránh lỗi Firebase tự ép kiểu Array thành Object khi xóa tài liệu
+                const docsList = bag && bag.documents ? (Array.isArray(bag.documents) ? bag.documents : Object.values(bag.documents)) : [];
 
-                tbody.innerHTML = bag.documents.map((doc, idx) => `
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-3 py-3 text-center font-semibold text-gray-500">${idx + 1}</td>
-                        <td class="px-3 py-3 font-medium text-gray-800 whitespace-normal min-w-[150px]">${doc.name}</td>
-                        <td class="px-3 py-3 text-blue-600 font-mono text-xs font-bold">${doc.code}</td>
-                        <td class="px-3 py-3 text-gray-500 text-xs">${doc.dateAdded}</td>
-                        <td class="px-3 py-3 text-center">
-                            <button onclick="app.printDocument('${doc.id}', 'label')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded" title="In nhãn tài liệu"><i class="fa-solid fa-print"></i></button>
-                        </td>
-                        <td class="px-3 py-3 text-center">
-                            <button onclick="app.deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash-can"></i></button>
-                        </td>
-                    </tr>
-                `).join('');
+                const htmlContent = docsList.length === 0 
+                    ? `<tr><td colspan="6" class="text-center py-8 text-gray-500 italic">Túi trống. Chưa có tài liệu nào.</td></tr>`
+                    : docsList.map((doc, idx) => {
+                        const contentHtml = doc.content ? `<div class="text-[10px] text-gray-500 mt-1 italic whitespace-normal bg-gray-50 p-1.5 rounded border border-gray-100">Nội dung: ${doc.content}</div>` : '';
+                        return `
+                            <tr class="hover:bg-gray-50 border-b">
+                                <td class="px-3 py-3 text-center font-semibold text-gray-500 align-top">${idx + 1}</td>
+                                <td class="px-3 py-3 font-medium text-gray-800 min-w-[150px] align-top">
+                                    <div class="whitespace-normal">${doc.name}</div>
+                                    ${contentHtml}
+                                </td>
+                                <td class="px-3 py-3 text-blue-600 font-mono text-xs font-bold align-top">${doc.code}</td>
+                                <td class="px-3 py-3 text-gray-500 text-xs align-top">${doc.dateAdded}</td>
+                                <td class="px-3 py-3 text-center align-top whitespace-nowrap">
+                                    <button type="button" onclick="app.printDocument('${doc.id}', 'label')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded" title="In nhãn tài liệu"><i class="fa-solid fa-print"></i></button>
+                                </td>
+                                <td class="px-3 py-3 text-center align-top whitespace-nowrap">
+                                    <button type="button" onclick="app.deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                // Gắn HTML vào tất cả bảng (phòng khi HTML bị trùng lặp)
+                tbodyList.forEach(tbody => tbody.innerHTML = htmlContent);
             }
 
             async addDocument() {
-                const inputName = document.getElementById('newDocName');
-                const inputContent = document.getElementById('newDocContent');
-                const hasContent = document.getElementById('hasDocContent').checked;
-                
-                const name = inputName.value.trim();
-                if (!name) return;
-
-                const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
-                if (!bag) return;
-
-                const now = new Date();
-                const dateStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
-                
-                // Sinh mã tài liệu ngẫu nhiên
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                let randomCode = 'TL-';
-                for(let i=0; i<6; i++) randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
-
-                const newDoc = {
-                    id: 'DOC-' + Date.now(),
-                    name: name,
-                    code: randomCode,
-                    dateAdded: dateStr
-                };
-                
-                if (hasContent && inputContent.value.trim()) {
-                    newDoc.content = inputContent.value.trim();
-                }
-
-                const updatedDocs = bag.documents ? [...bag.documents, newDoc] : [newDoc];
-                
                 try {
+                    const inputName = document.getElementById('newDocName');
+                    const inputContent = document.getElementById('newDocContent');
+                    const hasContent = document.getElementById('hasDocContent');
+                    
+                    const name = inputName ? inputName.value.trim() : '';
+                    if (!name) return;
+
+                    const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
+                    if (!bag) return;
+
+                    const now = new Date();
+                    const dateStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
+                    
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                    let randomCode = 'TL-';
+                    for(let i=0; i<6; i++) randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+
+                    const newDoc = {
+                        id: 'DOC-' + Date.now(),
+                        name: name,
+                        code: randomCode,
+                        dateAdded: dateStr
+                    };
+                    
+                    if (hasContent && hasContent.checked && inputContent && inputContent.value.trim()) {
+                        newDoc.content = inputContent.value.trim();
+                    }
+
+                    // Tương tự, dùng Object.values để chống lỗi sập web từ Firebase
+                    const docsList = bag.documents ? (Array.isArray(bag.documents) ? bag.documents : Object.values(bag.documents)) : [];
+                    const updatedDocs = [...docsList, newDoc];
+                    
                     await set(ref(this.db, `clearbags/${bag.id}/documents`), updatedDocs);
+                    
                     // Reset form sau khi thêm
-                    inputName.value = '';
-                    inputContent.value = '';
-                    document.getElementById('hasDocContent').checked = false;
-                    document.getElementById('docContentWrapper').classList.add('hidden');
+                    if (inputName) inputName.value = '';
+                    if (inputContent) inputContent.value = '';
+                    if (hasContent) hasContent.checked = false;
+                    
+                    const wrapper = document.getElementById('docContentWrapper');
+                    if (wrapper) wrapper.classList.add('hidden');
                 } catch (e) {
-                    Swal.fire('Lỗi!', 'Không thể lưu tài liệu: ' + e.message, 'error');
+                    console.error(e);
+                    if (window.Swal) Swal.fire('Lỗi!', 'Không thể lưu tài liệu: ' + e.message, 'error');
+                    else alert('Lỗi: ' + e.message);
                 }
             }
 
@@ -1191,7 +1221,9 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
                 if (!bag) return;
 
-                const updatedDocs = bag.documents.filter(d => d.id !== docId);
+                const docsList = bag.documents ? (Array.isArray(bag.documents) ? bag.documents : Object.values(bag.documents)) : [];
+                const updatedDocs = docsList.filter(d => d.id !== docId);
+                
                 await set(ref(this.db, `clearbags/${bag.id}/documents`), updatedDocs);
             }
 
