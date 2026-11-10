@@ -139,6 +139,11 @@
                             <option value="mon_hoc">Môn học</option>
                             <option value="tai_lieu">Tài liệu</option>
                         </select>
+                        <!-- Checkbox Lịch cho Tài liệu -->
+                        <label id="docScheduleLabel" class="hidden items-center gap-1.5 mt-2 cursor-pointer">
+                            <input type="checkbox" id="hasDocSchedule" onchange="app.toggleTypeFields()" class="w-3.5 h-3.5 text-blue-600 rounded border-gray-300">
+                            <span class="text-[11px] font-bold text-gray-600 uppercase">Có lịch trình</span>
+                        </label>
                     </div>
                     <div class="col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tên Clearbag <span class="text-red-500">*</span></label>
@@ -146,18 +151,40 @@
                     </div>
                 </div>
                 
-                <!-- Dynamic Subject Fields -->
-                <div id="subjectFields" class="p-4 bg-blue-50/50 rounded-lg border border-blue-100 space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mã MH <span class="text-red-500">*</span></label>
-                            <input type="text" id="subjectCode" maxlength="6" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-gray-400" placeholder="VD: CH1001">
+                <!-- Dynamic Fields (Môn học / Lịch trình) -->
+                <div id="dynamicFields" class="p-4 bg-blue-50/50 rounded-lg border border-blue-100 space-y-4">
+                    <div id="subjectInfoFields" class="space-y-3">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mã MH <span class="text-red-500">*</span></label>
+                                <input type="text" id="subjectCode" maxlength="6" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-gray-400" placeholder="VD: CH1001">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Học kỳ</label>
+                                <input type="text" id="semester" readonly class="w-full px-3 py-2 border rounded-lg bg-gray-200/60 text-gray-700 outline-none font-bold text-center">
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Học kỳ</label>
-                            <input type="text" id="semester" readonly class="w-full px-3 py-2 border rounded-lg bg-gray-200/60 text-gray-700 outline-none font-bold text-center">
+                        <!-- Cụm check mã môn phụ -->
+                        <div class="pt-1">
+                            <label class="flex items-center gap-2 cursor-pointer mb-2 w-max">
+                                <input type="checkbox" id="hasSubSubject" onchange="app.toggleTypeFields()" class="w-4 h-4 text-blue-600 rounded border-gray-300">
+                                <span class="text-xs font-semibold text-gray-700">Kèm mã môn phụ</span>
+                            </label>
+                            <input type="text" id="subSubjectCode" maxlength="6" class="w-full px-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder-gray-400 hidden transition-all" placeholder="Nhập mã môn phụ (VD: CH1002)...">
                         </div>
                     </div>
+
+                    <!-- Khung Lịch Trình dùng chung -->
+                    <div id="scheduleWrapper">
+                        <div class="flex justify-between items-center mb-2 border-t border-blue-100 pt-3">
+                            <label class="block text-sm font-medium text-gray-700">Lịch học / Lịch trình <span class="text-red-500">*</span></label>
+                            <button type="button" onclick="app.addScheduleRow()" class="text-xs bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 font-semibold shadow-sm transition-colors"><i class="fa-solid fa-plus"></i> Thêm ngày</button>
+                        </div>
+                        <div id="scheduleContainer" class="space-y-2 max-h-40 overflow-y-auto no-scrollbar border p-2 rounded-lg bg-white shadow-inner">
+                            <!-- Schedules rendered here -->
+                        </div>
+                    </div>
+                </div>
                     <div>
                         <div class="flex justify-between items-center mb-2">
                             <label class="block text-sm font-medium text-gray-700">Lịch học <span class="text-red-500">*</span></label>
@@ -317,12 +344,15 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     this.render();
                 });
 
-                document.getElementById('subjectCode').addEventListener('input', function(e) {
+                // Ép mã MH viết hoa, không dấu, tối đa 6 kí tự
+                const formatCodeInput = function(e) {
                     let val = e.target.value;
                     val = val.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                     val = val.replace(/[^A-Za-z0-9]/g, '');
                     e.target.value = val.toUpperCase().substring(0, 6);
-                });
+                };
+                document.getElementById('subjectCode').addEventListener('input', formatCodeInput);
+                document.getElementById('subSubjectCode').addEventListener('input', formatCodeInput);
                 
                 // Đã XÓA phần document.getElementById('scanInput').addEventListener...
             }
@@ -395,12 +425,46 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             toggleTypeFields() {
                 const type = document.getElementById('bagType').value;
-                const subjectFields = document.getElementById('subjectFields');
+                const dynamicFields = document.getElementById('dynamicFields');
+                const subjectInfoFields = document.getElementById('subjectInfoFields');
+                const scheduleWrapper = document.getElementById('scheduleWrapper');
+                
+                const docScheduleLabel = document.getElementById('docScheduleLabel');
+                const hasDocSchedule = document.getElementById('hasDocSchedule').checked;
+                
+                const subSubjectInput = document.getElementById('subSubjectCode');
+                const hasSubSubject = document.getElementById('hasSubSubject').checked;
+
                 if (type === 'mon_hoc') {
-                    subjectFields.classList.remove('hidden');
+                    // Môn học: Tắt checkbox Lịch Tài Liệu, Bật toàn bộ khung Lịch & Môn
+                    docScheduleLabel.classList.add('hidden');
+                    document.getElementById('hasDocSchedule').checked = false;
+                    
+                    dynamicFields.classList.remove('hidden');
+                    subjectInfoFields.classList.remove('hidden');
+                    scheduleWrapper.classList.remove('hidden');
                     document.getElementById('semester').value = this.calculateSemester();
+                    
+                    // Logic môn phụ
+                    if (hasSubSubject) subSubjectInput.classList.remove('hidden');
+                    else {
+                        subSubjectInput.classList.add('hidden');
+                        subSubjectInput.value = '';
+                    }
                 } else {
-                    subjectFields.classList.add('hidden');
+                    // Tài liệu: Hiện checkbox Lịch Tài Liệu, Ẩn phần mã Môn Học
+                    docScheduleLabel.classList.remove('hidden');
+                    docScheduleLabel.classList.add('flex');
+                    subjectInfoFields.classList.add('hidden');
+                    
+                    // Logic hiển thị lịch cho Tài liệu
+                    if (hasDocSchedule) {
+                        dynamicFields.classList.remove('hidden');
+                        scheduleWrapper.classList.remove('hidden');
+                    } else {
+                        dynamicFields.classList.add('hidden');
+                        scheduleWrapper.classList.add('hidden');
+                    }
                 }
             }
 
@@ -442,27 +506,39 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                         const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Tài liệu</span>';
                         
                         let extraInfo = '';
-                        if (bag.type === 'mon_hoc') {
+                        // Hiển thị lịch nếu là Môn học HOẶC (Tài liệu có lịch trình)
+                        if (bag.type === 'mon_hoc' || (bag.type === 'tai_lieu' && bag.schedules && bag.schedules.length > 0)) {
                             let scheduleHtml = '';
                             if(bag.schedules && Array.isArray(bag.schedules)) {
                                 scheduleHtml = bag.schedules.map(s => {
                                     const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">T:${s.weeks}</span>` : '';
-                                    return `<div class="mt-0.5 flex items-center whitespace-nowrap"><i class="fa-regular fa-clock w-3 mr-1"></i> ${s.day}, ${s.start}-${s.end} ${wInfo}</div>`;
+                                    return `<div class="mt-0.5 flex items-center whitespace-nowrap"><i class="fa-regular fa-clock w-3 mr-1 text-gray-400"></i> ${s.day}, ${s.start}-${s.end} ${wInfo}</div>`;
                                 }).join('');
                             }
-                            extraInfo = `
-                                <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
-                                    <span class="font-bold text-gray-800">${bag.subjectCode}</span> (HK: ${bag.semester})<br>
-                                    ${scheduleHtml}
-                                </div>
-                            `;
+                            
+                            if (bag.type === 'mon_hoc') {
+                                const subCodeStr = bag.subSubjectCode ? `<span class="text-blue-500 text-[10px] font-bold ml-1">(+ ${bag.subSubjectCode})</span>` : '';
+                                extraInfo = `
+                                    <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                        <div class="mb-1"><span class="font-bold text-gray-800">${bag.subjectCode}</span>${subCodeStr} <span class="bg-gray-200 px-1.5 py-0.5 rounded text-[10px] ml-1">HK: ${bag.semester}</span></div>
+                                        ${scheduleHtml}
+                                    </div>
+                                `;
+                            } else {
+                                extraInfo = `
+                                    <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                        <div class="mb-1 font-bold text-gray-800 border-b pb-0.5">Lịch trình Tài liệu:</div>
+                                        ${scheduleHtml}
+                                    </div>
+                                `;
+                            }
                         }
 
                         tbody.innerHTML += `
                             <tr class="hover:bg-gray-50 border-b">
                                 <td class="px-4 md:px-6 py-3 font-semibold text-blue-600 align-top">${bag.code}</td>
-                                <td class="px-4 md:px-6 py-3 align-top">${typeLabel}</td>
-                                <td class="px-4 md:px-6 py-3 align-top font-bold text-blue-700 truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem nội dung tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
+                                <td class="px-4 md:px-6 py-3 align-top whitespace-nowrap">${typeLabel}</td>
+                                <td class="px-4 md:px-6 py-3 align-top font-bold text-blue-700 truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem chi tiết tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
                                 <td class="px-4 md:px-6 py-3 align-top min-w-[200px] hidden sm:table-cell">${extraInfo}</td>
                                 <td class="px-4 md:px-6 py-3 text-center align-top whitespace-nowrap">
                                     <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 p-1.5 md:px-2 md:py-1 rounded mx-0.5" title="In nhãn"><i class="fa-solid fa-print"></i></button>
@@ -521,10 +597,12 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                         ).join('');
                     }
 
+                    const subCodeStr = bag.subSubjectCode ? `<div class="text-[10px] text-blue-500 mt-0.5">(+ ${bag.subSubjectCode})</div>` : '';
+
                     return `
                         <tr class="hover:bg-gray-50 border-b transition-colors">
-                            <td class="px-4 md:px-6 py-3 font-bold text-gray-800">${bag.subjectCode || 'N/A'}</td>
-                            <td class="px-4 md:px-6 py-3 text-blue-700 font-bold truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem nội dung tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
+                            <td class="px-4 md:px-6 py-3 font-bold text-gray-800 leading-tight">${bag.subjectCode || 'N/A'}${subCodeStr}</td>
+                            <td class="px-4 md:px-6 py-3 text-blue-700 font-bold truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem chi tiết tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
                             <td class="px-4 md:px-6 py-3 hidden sm:table-cell">${scheduleHtml}</td>
                             <td class="px-4 md:px-6 py-3 text-center font-bold text-blue-600 bg-gray-50/50">${bag.semester || 'N/A'}</td>
                         </tr>
@@ -582,6 +660,9 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 document.getElementById('bagForm').reset();
                 document.getElementById('bagId').value = '';
                 document.getElementById('bagCode').value = this.generateRandomCode();
+                document.getElementById('hasDocSchedule').checked = false;
+                document.getElementById('hasSubSubject').checked = false;
+                document.getElementById('subSubjectCode').value = '';
                 document.getElementById('modalTitle').innerText = 'Thêm Clearbag Mới';
                 
                 this.currentSchedules = [];
@@ -606,9 +687,14 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     if (bag.type === 'mon_hoc') {
                         document.getElementById('subjectCode').value = bag.subjectCode || '';
                         document.getElementById('semester').value = bag.semester || '';
+                        
+                        document.getElementById('hasSubSubject').checked = !!bag.subSubjectCode;
+                        document.getElementById('subSubjectCode').value = bag.subSubjectCode || '';
+                        
                         this.currentSchedules = bag.schedules ? JSON.parse(JSON.stringify(bag.schedules)) : [];
                     } else {
-                        this.currentSchedules = [];
+                        document.getElementById('hasDocSchedule').checked = (bag.schedules && bag.schedules.length > 0);
+                        this.currentSchedules = bag.schedules ? JSON.parse(JSON.stringify(bag.schedules)) : [];
                     }
 
                     this.renderScheduleUI();
@@ -632,11 +718,35 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     name: nameInput
                 };
 
-                if (typeInput === 'mon_hoc') {
+                if (typeInput === 'tai_lieu') {
+                    // Kiểm tra trùng Tên Tài Liệu
+                    const isDuplicateDoc = this.bags.some(b => b.type === 'tai_lieu' && b.name.toLowerCase() === nameInput.toLowerCase() && b.id !== idInput);
+                    if (isDuplicateDoc) {
+                        return alert(`Túi tài liệu có tên "${nameInput}" đã tồn tại trong kho! Vui lòng đặt tên khác.`);
+                    }
+                    
+                    if (document.getElementById('hasDocSchedule').checked) {
+                        if (this.currentSchedules.length === 0) return alert("Vui lòng thêm ít nhất 1 buổi trong lịch trình!");
+                        for(let i=0; i<this.currentSchedules.length; i++) {
+                            let s = this.currentSchedules[i];
+                            if(!s.start || !s.end) return alert(`Vui lòng chọn đầy đủ thời gian bắt đầu/kết thúc ở lịch số ${i+1}`);
+                        }
+                        dataToSave.schedules = this.currentSchedules;
+                    } else {
+                        dataToSave.schedules = [];
+                    }
+                } else if (typeInput === 'mon_hoc') {
                     const subjCode = document.getElementById('subjectCode').value.trim().toUpperCase();
                     if (subjCode.length !== 6) return alert("Mã môn học phải có đúng 6 ký tự!");
                     
-                    const isDuplicate = this.bags.some(b => b.type === 'mon_hoc' && b.subjectCode === subjCode && b.id !== idInput);
+                    let subSubjCode = '';
+                    if (document.getElementById('hasSubSubject').checked) {
+                        subSubjCode = document.getElementById('subSubjectCode').value.trim().toUpperCase();
+                        if (subSubjCode.length > 0 && subSubjCode.length !== 6) return alert("Mã môn phụ phải có đúng 6 ký tự!");
+                    }
+                    
+                    // CHỐNG TRÙNG MÃ MÔN HỌC (Kiểm tra cả 2 trường)
+                    const isDuplicate = this.bags.some(b => b.type === 'mon_hoc' && b.id !== idInput && (b.subjectCode === subjCode || (b.subSubjectCode && b.subSubjectCode === subjCode)));
                     if (isDuplicate) return alert(`Mã môn học ${subjCode} đã tồn tại trong kho! Vui lòng nhập mã khác.`);
                     
                     if (this.currentSchedules.length === 0) return alert("Vui lòng thêm ít nhất 1 buổi học!");
@@ -646,6 +756,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     }
 
                     dataToSave.subjectCode = subjCode;
+                    if (subSubjCode) dataToSave.subSubjectCode = subSubjCode;
                     dataToSave.semester = document.getElementById('semester').value;
                     dataToSave.schedules = this.currentSchedules;
                 }
@@ -653,12 +764,6 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const key = idInput || codeInput;
                 await set(ref(this.db, 'clearbags/' + key), dataToSave);
                 this.closeModal();
-            }
-
-            async deleteBag(id) {
-                if(confirm('Bạn có chắc muốn xóa túi này?')) {
-                    await remove(ref(this.db, 'clearbags/' + id));
-                }
             }
 
             // --- XỬ LÝ CHỌN TUẦN (NHIỀU KHOẢNG) ---
@@ -825,50 +930,47 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
             checkBagForToday(bagCode) {
                 const cleanCode = bagCode.trim().toUpperCase();
                 const bag = this.bags.find(b => b.code.toUpperCase() === cleanCode);
-                
-                // Khôi phục lại cách hiển thị thông báo trực tiếp trên giao diện modal
-                // để đảm bảo không bị xung đột z-index hoặc thư viện bên thứ 3
                 const resultBox = document.getElementById('scanResult');
                 
                 if (!bag) {
                     resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-red-100 text-red-700 border border-red-300 flex flex-col items-center justify-center text-center shadow-inner";
                     resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mb-1 text-2xl"></i> Không tìm thấy mã:<br><span class="font-mono text-lg mt-1">${cleanCode}</span>`;
-                } else if (bag.type === 'tai_lieu') {
-                    resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
-                    resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU CHUNG<br><span class="text-base mt-1">${bag.name}</span>`;
                 } else {
+                    let isCorrectForToday = false;
                     const currentWeek = this.getCurrentISOWeek();
                     const currentDay = this.getCurrentDayString();
-                    let isCorrectForToday = false;
                     
-                    if (bag.schedules && bag.schedules.length > 0) {
+                    // Nếu là Môn học HOẶC (Tài liệu có kèm theo lịch trình) thì tiến hành so khớp lịch
+                    if (bag.type === 'mon_hoc' || (bag.type === 'tai_lieu' && bag.schedules && bag.schedules.length > 0)) {
                         for(let sch of bag.schedules) {
                             const validWeeks = this.parseWeeks(sch.weeks);
-                            // Chỉ kiểm tra Ngày và Tuần
                             if (sch.day === currentDay && validWeeks.includes(currentWeek)) {
                                 isCorrectForToday = true;
                                 break;
                             }
                         }
-                    }
 
-                    if (isCorrectForToday) {
-                        resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-green-100 text-green-800 border border-green-400 flex flex-col items-center justify-center text-center shadow-inner scale-105 transition-transform";
-                        resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${bag.name} (${bag.subjectCode})</span>`;
+                        if (isCorrectForToday) {
+                            resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-green-100 text-green-800 border border-green-400 flex flex-col items-center justify-center text-center shadow-inner scale-105 transition-transform";
+                            resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${bag.name} ${bag.subjectCode ? '('+bag.subjectCode+')' : ''}</span>`;
+                        } else {
+                            resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-400 flex flex-col items-center justify-center text-center shadow-inner";
+                            resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Túi này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${bag.name}`;
+                        }
                     } else {
-                        resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-400 flex flex-col items-center justify-center text-center shadow-inner";
-                        resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Môn này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${bag.name}`;
+                        // Nếu là Tài liệu thường (Không đánh dấu lịch)
+                        resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
+                        resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU CHUNG<br><span class="text-base mt-1">${bag.name}</span>`;
                     }
                 }
 
-                // Tự động Resume quét sau 3 giây (đủ để đọc thông báo)
                 setTimeout(() => {
-                    if (this.html5QrcodeScanner && this.html5QrcodeScanner.getState() === 3) { // 3 = PAUSED
+                    if (this.html5QrcodeScanner && this.html5QrcodeScanner.getState() === 3) {
                         this.html5QrcodeScanner.resume();
                         resultBox.innerHTML = "Tiếp tục đưa mã vào khung camera...";
                         resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-medium p-3 md:p-4 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center transition-all duration-300";
                     }
-                }, 5000);
+                }, 3000);
             }
             // --- XỬ LÝ IN ẤN ---
             openPrintModal(id) {
