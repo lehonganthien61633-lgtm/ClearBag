@@ -934,20 +934,40 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             checkBagForToday(bagCode) {
                 const cleanCode = bagCode.trim().toUpperCase();
-                const bag = this.bags.find(b => b.code.toUpperCase() === cleanCode);
                 const resultBox = document.getElementById('scanResult');
                 
-                if (!bag) {
+                let foundBag = this.bags.find(b => b.code.toUpperCase() === cleanCode);
+                let foundDoc = null;
+                
+                // Nếu không tìm thấy mã túi, quét trong danh sách tài liệu con
+                if (!foundBag) {
+                    for (let bag of this.bags) {
+                        if (bag.documents && Array.isArray(bag.documents)) {
+                            foundDoc = bag.documents.find(d => d.code.toUpperCase() === cleanCode);
+                            if (foundDoc) {
+                                foundBag = bag;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!foundBag) {
                     resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-red-100 text-red-700 border border-red-300 flex flex-col items-center justify-center text-center shadow-inner";
                     resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mb-1 text-2xl"></i> Không tìm thấy mã:<br><span class="font-mono text-lg mt-1">${cleanCode}</span>`;
+                } else if (foundDoc) {
+                    // Nếu là tài liệu
+                    const lessonInfo = foundDoc.lesson ? `<br><span class="font-normal text-[11px]"><i class="fa-solid fa-book-open"></i> Bài: ${foundDoc.lesson}</span>` : '';
+                    resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
+                    resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU<br><span class="text-base mt-1">${foundDoc.name}</span>${lessonInfo}<br><span class="text-xs text-gray-500 mt-1">Thuộc túi: ${foundBag.name}</span>`;
                 } else {
+                    // Quét trúng Túi
                     let isCorrectForToday = false;
                     const currentWeek = this.getCurrentISOWeek();
                     const currentDay = this.getCurrentDayString();
                     
-                    // Nếu là Môn học HOẶC (Tài liệu có kèm theo lịch trình) thì tiến hành so khớp lịch
-                    if (bag.type === 'mon_hoc' || (bag.type === 'tai_lieu' && bag.schedules && bag.schedules.length > 0)) {
-                        for(let sch of bag.schedules) {
+                    if (foundBag.type === 'mon_hoc' || (foundBag.type === 'tai_lieu' && foundBag.schedules && foundBag.schedules.length > 0)) {
+                        for(let sch of foundBag.schedules) {
                             const validWeeks = this.parseWeeks(sch.weeks);
                             if (sch.day === currentDay && validWeeks.includes(currentWeek)) {
                                 isCorrectForToday = true;
@@ -957,15 +977,14 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                         if (isCorrectForToday) {
                             resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-green-100 text-green-800 border border-green-400 flex flex-col items-center justify-center text-center shadow-inner scale-105 transition-transform";
-                            resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${bag.name} ${bag.subjectCode ? '('+bag.subjectCode+')' : ''}</span>`;
+                            resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${foundBag.name} ${foundBag.subjectCode ? '('+foundBag.subjectCode+')' : ''}</span>`;
                         } else {
                             resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-400 flex flex-col items-center justify-center text-center shadow-inner";
-                            resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Túi này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${bag.name}`;
+                            resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Túi này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${foundBag.name}`;
                         }
                     } else {
-                        // Nếu là Tài liệu thường (Không đánh dấu lịch)
                         resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
-                        resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU CHUNG<br><span class="text-base mt-1">${bag.name}</span>`;
+                        resultBox.innerHTML = `<i class="fa-solid fa-folder-open mb-1 text-2xl"></i> TÚI TÀI LIỆU<br><span class="text-base mt-1">${foundBag.name}</span>`;
                     }
                 }
 
@@ -1201,11 +1220,11 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                 const lessonHtml = doc.lesson ? `<div style="font-size:5.5pt; margin-bottom: 1mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; word-break: break-word;"><b>Bài:</b> ${doc.lesson}</div>` : '';
                 
-                // Nội dung gộp: Trái (Thông tin) - Phải (QR căn sang phải)
+                // Nội dung gộp: Trái (Thông tin thu nhỏ lại) - Phải (QR tràn viền)
                 const content = `
                     <div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: space-between;">
                         <!-- Bên trái: Thông tin -->
-                        <div style="width: 53%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 1mm;">
+                        <div style="width: 48%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 0.5mm;">
                             <div style="font-weight:bold; font-size:6.5pt; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 0.5mm; text-align: center;">TÀI LIỆU</div>
                             <div style="font-size:6pt; margin-bottom: 1mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word;"><b>Tên:</b> ${doc.name}</div>
                             ${lessonHtml}
@@ -1216,9 +1235,9 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                         <!-- Đường chia giữa -->
                         <div style="width: 0px; height: 90%; border-left: 1px dashed #ccc;"></div>
 
-                        <!-- Bên phải: Mã QR dịch sang phải -->
-                        <div style="width: 44%; height: 100%; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding-left: 1.5mm;">
-                            <img src="${qrApiUrl}" style="width: 100%; height: auto; max-height: 100%; object-fit: contain; object-position: right center;">
+                        <!-- Bên phải: Mã QR lớn tối đa -->
+                        <div style="width: 50%; height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-left: 1mm; overflow: visible;">
+                            <img src="${qrApiUrl}" style="height: 105%; width: auto; object-fit: contain; transform-origin: right center;">
                         </div>
                     </div>
                 `;
