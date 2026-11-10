@@ -194,50 +194,25 @@
         </div>
     </div>
 
-    <!-- Modal Chi tiết Nội dung Túi (Tài liệu) -->
-    <div id="bagDetailsModal" class="fixed inset-0 bg-black/60 z-[75] hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-2xl flex flex-col max-h-[90vh]">
-            <div class="flex justify-between items-center mb-4 border-b pb-2 shrink-0">
-                <h4 class="font-bold text-lg text-gray-800" id="bagDetailsTitle">Nội dung túi</h4>
-                <button onclick="app.closeBagDetails()" class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+    <!-- Modal Chọn Tuần Học -->
+    <div id="weekModal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h4 class="font-bold text-lg text-gray-800">Nhập tuần học</h4>
+                <span id="weekModalSemester" class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded">HK: N/A</span>
             </div>
             
-            <form class="mb-4 shrink-0 bg-gray-50 p-3 rounded-lg border border-gray-200" onsubmit="event.preventDefault(); app.addDocument();">
-                <div class="flex gap-2 items-start">
-                    <div class="flex-1 flex flex-col gap-2">
-                        <input type="text" id="newDocName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nhập tên tài liệu mới...">
-                        
-                        <!-- Checkbox và Ô nhập nội dung tài liệu -->
-                        <div>
-                            <label class="flex items-center gap-2 cursor-pointer w-max mb-1">
-                                <input type="checkbox" id="hasDocContent" onchange="document.getElementById('docContentWrapper').classList.toggle('hidden', !this.checked)" class="w-3.5 h-3.5 text-blue-600 rounded border-gray-300">
-                                <span class="text-xs font-semibold text-gray-700">Kèm nội dung tài liệu</span>
-                            </label>
-                            <div id="docContentWrapper" class="hidden transition-all">
-                                <textarea id="newDocContent" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-xs" placeholder="Ghi chú nội dung chi tiết..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit" class="px-4 py-2 h-9 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm whitespace-nowrap"><i class="fa-solid fa-plus md:mr-1"></i> <span class="hidden md:inline">Thêm tài liệu</span></button>
-                </div>
-            </form>
-
-            <div class="flex-1 overflow-auto border rounded-lg no-scrollbar">
-                <table class="w-full text-left whitespace-nowrap text-sm">
-                    <thead class="bg-gray-100 text-gray-600 sticky top-0 z-10 shadow-sm">
-                        <tr>
-                            <th class="px-3 py-2 font-medium w-10 text-center">STT</th>
-                            <th class="px-3 py-2 font-medium">Tên tài liệu</th>
-                            <th class="px-3 py-2 font-medium">Mã TL</th>
-                            <th class="px-3 py-2 font-medium">Ngày thêm</th>
-                            <th class="px-3 py-2 font-medium text-center">In tem</th>
-                            <th class="px-3 py-2 font-medium text-center">Xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody id="docsTableBody" class="divide-y divide-gray-100 bg-white">
-                        <!-- Tài liệu sẽ được render ở đây -->
-                    </tbody>
-                </table>
+            <div id="weekRangesContainer" class="space-y-3 max-h-48 overflow-y-auto no-scrollbar mb-4 p-1">
+                <!-- Các khoảng tuần sẽ render tại đây -->
+            </div>
+            
+            <button type="button" onclick="app.addWeekRange()" class="w-full mb-6 border border-dashed border-blue-400 text-blue-600 bg-blue-50 hover:bg-blue-100 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1">
+                <i class="fa-solid fa-plus"></i> Thêm khoảng tuần
+            </button>
+            
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onclick="app.closeWeekModal()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Hủy</button>
+                <button type="button" onclick="app.saveWeeks()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm">Lưu tuần</button>
             </div>
         </div>
     </div>
@@ -295,7 +270,7 @@
                 <button onclick="app.closeBagDetails()" class="text-gray-400 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <form class="mb-4 shrink-0 bg-gray-50 p-3 rounded-lg border border-gray-200" onsubmit="event.preventDefault(); app.addDocument();">
+            <form class="mb-4 shrink-0 bg-gray-50 p-3 rounded-lg border border-gray-200" onsubmit="app.addDocument(); return false;">
                 <div class="flex gap-2 items-start">
                     <div class="flex-1 flex flex-col gap-2">
                         <input type="text" id="newDocName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nhập tên tài liệu mới...">
@@ -426,7 +401,6 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
             // --- GIAO DIỆN & TƯƠNG TÁC CHÍNH ---
             toggleSidebar() {
-                if (window.innerWidth >= 768) return; 
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
                 if (sidebar.classList.contains('-translate-x-full')) {
@@ -459,59 +433,47 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
             }
 
             toggleTypeFields() {
-                try {
-                    const type = document.getElementById('bagType').value;
-                    const dynamicFields = document.getElementById('dynamicFields');
-                    const subjectInfoFields = document.getElementById('subjectInfoFields');
-                    const scheduleWrapper = document.getElementById('scheduleWrapper');
-                    
-                    const docScheduleLabel = document.getElementById('docScheduleLabel');
-                    const hasDocScheduleEl = document.getElementById('hasDocSchedule');
-                    const hasDocSchedule = hasDocScheduleEl ? hasDocScheduleEl.checked : false;
-                    
-                    const subSubjectInput = document.getElementById('subSubjectCode');
-                    const hasSubSubjectEl = document.getElementById('hasSubSubject');
-                    const hasSubSubject = hasSubSubjectEl ? hasSubSubjectEl.checked : false;
+                const type = document.getElementById('bagType').value;
+                const dynamicFields = document.getElementById('dynamicFields');
+                const subjectInfoFields = document.getElementById('subjectInfoFields');
+                const scheduleWrapper = document.getElementById('scheduleWrapper');
+                
+                const docScheduleLabel = document.getElementById('docScheduleLabel');
+                const hasDocSchedule = document.getElementById('hasDocSchedule').checked;
+                
+                const subSubjectInput = document.getElementById('subSubjectCode');
+                const hasSubSubject = document.getElementById('hasSubSubject').checked;
 
-                    if (type === 'mon_hoc') {
-                        // Môn học: Tắt checkbox Lịch Tài Liệu, Bật toàn bộ khung Lịch & Môn
-                        if (docScheduleLabel) docScheduleLabel.classList.add('hidden');
-                        if (hasDocScheduleEl) hasDocScheduleEl.checked = false;
-                        
-                        if (dynamicFields) dynamicFields.classList.remove('hidden');
-                        if (subjectInfoFields) subjectInfoFields.classList.remove('hidden');
-                        if (scheduleWrapper) scheduleWrapper.classList.remove('hidden');
-                        
-                        const semesterEl = document.getElementById('semester');
-                        if (semesterEl) semesterEl.value = this.calculateSemester();
-                        
-                        // Logic môn phụ
-                        if (subSubjectInput) {
-                            if (hasSubSubject) subSubjectInput.classList.remove('hidden');
-                            else {
-                                subSubjectInput.classList.add('hidden');
-                                subSubjectInput.value = '';
-                            }
-                        }
-                    } else {
-                        // Tài liệu: Hiện checkbox Lịch Tài Liệu, Ẩn phần mã Môn Học
-                        if (docScheduleLabel) {
-                            docScheduleLabel.classList.remove('hidden');
-                            docScheduleLabel.classList.add('flex');
-                        }
-                        if (subjectInfoFields) subjectInfoFields.classList.add('hidden');
-                        
-                        // Logic hiển thị lịch cho Tài liệu
-                        if (hasDocSchedule) {
-                            if (dynamicFields) dynamicFields.classList.remove('hidden');
-                            if (scheduleWrapper) scheduleWrapper.classList.remove('hidden');
-                        } else {
-                            if (dynamicFields) dynamicFields.classList.add('hidden');
-                            if (scheduleWrapper) scheduleWrapper.classList.add('hidden');
-                        }
+                if (type === 'mon_hoc') {
+                    // Môn học: Tắt checkbox Lịch Tài Liệu, Bật toàn bộ khung Lịch & Môn
+                    docScheduleLabel.classList.add('hidden');
+                    document.getElementById('hasDocSchedule').checked = false;
+                    
+                    dynamicFields.classList.remove('hidden');
+                    subjectInfoFields.classList.remove('hidden');
+                    scheduleWrapper.classList.remove('hidden');
+                    document.getElementById('semester').value = this.calculateSemester();
+                    
+                    // Logic môn phụ
+                    if (hasSubSubject) subSubjectInput.classList.remove('hidden');
+                    else {
+                        subSubjectInput.classList.add('hidden');
+                        subSubjectInput.value = '';
                     }
-                } catch(e) {
-                    console.error("Lỗi giao diện form:", e);
+                } else {
+                    // Tài liệu: Hiện checkbox Lịch Tài Liệu, Ẩn phần mã Môn Học
+                    docScheduleLabel.classList.remove('hidden');
+                    docScheduleLabel.classList.add('flex');
+                    subjectInfoFields.classList.add('hidden');
+                    
+                    // Logic hiển thị lịch cho Tài liệu
+                    if (hasDocSchedule) {
+                        dynamicFields.classList.remove('hidden');
+                        scheduleWrapper.classList.remove('hidden');
+                    } else {
+                        dynamicFields.classList.add('hidden');
+                        scheduleWrapper.classList.add('hidden');
+                    }
                 }
             }
 
@@ -1141,117 +1103,86 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const bag = this.bags.find(b => b.id === id);
                 if (!bag) return;
                 
-                const titleEl = document.getElementById('bagDetailsTitle');
-                if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i>Nội dung: ${bag.name}`;
-                
+                document.getElementById('bagDetailsTitle').innerHTML = `<i class="fa-solid fa-folder-open text-blue-500 mr-2"></i>Nội dung: ${bag.name}`;
                 this.renderDocuments();
-                
-                const modalEl = document.getElementById('bagDetailsModal');
-                if (modalEl) {
-                    modalEl.classList.remove('hidden');
-                    setTimeout(() => {
-                        const input = document.getElementById('newDocName');
-                        if (input) input.focus();
-                    }, 100);
-                }
+                document.getElementById('bagDetailsModal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('newDocName').focus(), 100);
             }
 
             closeBagDetails() {
-                const modalEl = document.getElementById('bagDetailsModal');
-                if (modalEl) modalEl.classList.add('hidden');
+                document.getElementById('bagDetailsModal').classList.add('hidden');
                 this.currentBagDetailsId = null;
-                
-                const inputName = document.getElementById('newDocName');
-                const inputContent = document.getElementById('newDocContent');
-                const hasContent = document.getElementById('hasDocContent');
-                const wrapper = document.getElementById('docContentWrapper');
-                
-                if (inputName) inputName.value = '';
-                if (inputContent) inputContent.value = '';
-                if (hasContent) hasContent.checked = false;
-                if (wrapper) wrapper.classList.add('hidden');
+                document.getElementById('newDocName').value = '';
+                document.getElementById('newDocContent').value = '';
+                document.getElementById('hasDocContent').checked = false;
+                document.getElementById('docContentWrapper').classList.add('hidden');
             }
 
             renderDocuments() {
                 const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
                 const tbody = document.getElementById('docsTableBody');
-                if (!tbody) return;
-
-                // CHỐNG LỖI FIREBASE ĐỔI ARRAY THÀNH OBJECT KHUYẾN APP BỊ ĐƠ
-                const docsList = (bag && bag.documents) ? (Array.isArray(bag.documents) ? bag.documents : Object.values(bag.documents)) : [];
-
-                if (docsList.length === 0) {
+                if (!bag || !bag.documents || bag.documents.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500 italic">Túi trống. Chưa có tài liệu nào.</td></tr>`;
                     return;
                 }
 
-                tbody.innerHTML = docsList.map((doc, idx) => {
-                    const contentHtml = doc.content ? `<div class="text-[10px] text-gray-500 mt-1 italic whitespace-normal bg-gray-50 p-1.5 rounded border border-gray-100">Nội dung: ${doc.content}</div>` : '';
-                    return `
-                        <tr class="hover:bg-gray-50 border-b">
-                            <td class="px-3 py-3 text-center font-semibold text-gray-500 align-top">${idx + 1}</td>
-                            <td class="px-3 py-3 font-medium text-gray-800 min-w-[150px] align-top">
-                                <div class="whitespace-normal">${doc.name}</div>
-                                ${contentHtml}
-                            </td>
-                            <td class="px-3 py-3 text-blue-600 font-mono text-xs font-bold align-top">${doc.code}</td>
-                            <td class="px-3 py-3 text-gray-500 text-xs align-top">${doc.dateAdded}</td>
-                            <td class="px-3 py-3 text-center align-top whitespace-nowrap">
-                                <button type="button" onclick="app.printDocument('${doc.id}', 'label')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded" title="In nhãn tài liệu"><i class="fa-solid fa-print"></i></button>
-                            </td>
-                            <td class="px-3 py-3 text-center align-top whitespace-nowrap">
-                                <button type="button" onclick="app.deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash-can"></i></button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                tbody.innerHTML = bag.documents.map((doc, idx) => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-3 py-3 text-center font-semibold text-gray-500">${idx + 1}</td>
+                        <td class="px-3 py-3 font-medium text-gray-800 whitespace-normal min-w-[150px]">${doc.name}</td>
+                        <td class="px-3 py-3 text-blue-600 font-mono text-xs font-bold">${doc.code}</td>
+                        <td class="px-3 py-3 text-gray-500 text-xs">${doc.dateAdded}</td>
+                        <td class="px-3 py-3 text-center">
+                            <button onclick="app.printDocument('${doc.id}', 'label')" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded" title="In nhãn tài liệu"><i class="fa-solid fa-print"></i></button>
+                        </td>
+                        <td class="px-3 py-3 text-center">
+                            <button onclick="app.deleteDocument('${doc.id}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
             }
 
             async addDocument() {
+                const inputName = document.getElementById('newDocName');
+                const inputContent = document.getElementById('newDocContent');
+                const hasContent = document.getElementById('hasDocContent').checked;
+                
+                const name = inputName.value.trim();
+                if (!name) return;
+
+                const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
+                if (!bag) return;
+
+                const now = new Date();
+                const dateStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
+                
+                // Sinh mã tài liệu ngẫu nhiên
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let randomCode = 'TL-';
+                for(let i=0; i<6; i++) randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+
+                const newDoc = {
+                    id: 'DOC-' + Date.now(),
+                    name: name,
+                    code: randomCode,
+                    dateAdded: dateStr
+                };
+                
+                if (hasContent && inputContent.value.trim()) {
+                    newDoc.content = inputContent.value.trim();
+                }
+
+                const updatedDocs = bag.documents ? [...bag.documents, newDoc] : [newDoc];
+                
                 try {
-                    const inputName = document.getElementById('newDocName');
-                    const inputContent = document.getElementById('newDocContent');
-                    const hasContent = document.getElementById('hasDocContent');
-                    
-                    const name = inputName ? inputName.value.trim() : '';
-                    if (!name) return;
-
-                    const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
-                    if (!bag) return;
-
-                    const now = new Date();
-                    const dateStr = `${now.getDate().toString().padStart(2,'0')}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getFullYear()}`;
-                    
-                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                    let randomCode = 'TL-';
-                    for(let i=0; i<6; i++) randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
-
-                    const newDoc = {
-                        id: 'DOC-' + Date.now(),
-                        name: name,
-                        code: randomCode,
-                        dateAdded: dateStr
-                    };
-                    
-                    if (hasContent && hasContent.checked && inputContent && inputContent.value.trim()) {
-                        newDoc.content = inputContent.value.trim();
-                    }
-
-                    const docsList = bag.documents ? (Array.isArray(bag.documents) ? bag.documents : Object.values(bag.documents)) : [];
-                    const updatedDocs = [...docsList, newDoc];
-                    
                     await set(ref(this.db, `clearbags/${bag.id}/documents`), updatedDocs);
-                    
                     // Reset form sau khi thêm
-                    if (inputName) inputName.value = '';
-                    if (inputContent) inputContent.value = '';
-                    if (hasContent) hasContent.checked = false;
-                    const wrapper = document.getElementById('docContentWrapper');
-                    if (wrapper) wrapper.classList.add('hidden');
+                    inputName.value = '';
+                    inputContent.value = '';
+                    document.getElementById('hasDocContent').checked = false;
+                    document.getElementById('docContentWrapper').classList.add('hidden');
                 } catch (e) {
-                    console.error(e);
-                    if (window.Swal) Swal.fire('Lỗi!', 'Không thể lưu tài liệu: ' + e.message, 'error');
-                    else alert('Lỗi: ' + e.message);
+                    Swal.fire('Lỗi!', 'Không thể lưu tài liệu: ' + e.message, 'error');
                 }
             }
 
@@ -1260,9 +1191,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const bag = this.bags.find(b => b.id === this.currentBagDetailsId);
                 if (!bag) return;
 
-                const docsList = bag.documents ? (Array.isArray(bag.documents) ? bag.documents : Object.values(bag.documents)) : [];
-                const updatedDocs = docsList.filter(d => d.id !== docId);
-                
+                const updatedDocs = bag.documents.filter(d => d.id !== docId);
                 await set(ref(this.db, `clearbags/${bag.id}/documents`), updatedDocs);
             }
 
