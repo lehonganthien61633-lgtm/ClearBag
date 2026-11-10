@@ -990,14 +990,14 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 let content = '';
                 
                 // QR Code (Luôn chứa mã túi để quét trên hệ thống)
-                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(bag.code)}&margin=0`;
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(bag.code)}&margin=0`;
 
                 if (printOnlyQR) {
                     // Cấu trúc CHỈ IN MÃ QR CODE
                     content = `
                         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%;">
-                            <img src="${qrApiUrl}" style="max-width: 80%; max-height: 80%; object-fit: contain;">
-                            <div style="font-size: 7pt; font-family: monospace; font-weight: bold; margin-top: 2mm;">${bag.code}</div>
+                            <img src="${qrApiUrl}" style="max-width: 85%; max-height: 85%; object-fit: contain;">
+                            <div style="font-size: 7pt; font-family: monospace; font-weight: bold; margin-top: 1mm;">${bag.code}</div>
                         </div>
                     `;
                 } else {
@@ -1027,17 +1027,17 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     content = `
                         <div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: space-between;">
                             <!-- Bên trái: Thông tin -->
-                            <div style="width: 58%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 1mm;">
+                            <div style="width: 55%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 1.5mm;">
                                 ${infoHtml}
                                 <div style="font-size:4.5pt; color: #555; margin-top: auto; font-style: italic;">In: ${timeStr}</div>
                             </div>
                             
                             <!-- Đường chia giữa -->
-                            <div style="width: 0px; height: 90%; border-left: 1px dashed #ccc;"></div>
+                            <div style="width: 0px; height: 90%; border-left: 1px dashed #aaa;"></div>
 
-                            <!-- Bên phải: Mã QR -->
-                            <div style="width: 38%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                                <img src="${qrApiUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            <!-- Bên phải: Mã QR được phóng to tối đa -->
+                            <div style="width: 42%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-left: 1.5mm;">
+                                <img src="${qrApiUrl}" style="width: 100%; height: auto; max-height: 100%; object-fit: contain;">
                             </div>
                         </div>
                     `;
@@ -1056,7 +1056,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                             width: ${safeW}mm; 
                             height: ${safeH}mm; 
                             box-sizing: border-box; 
-                            padding: 1mm;
+                            padding: 1.5mm;
                             font-family: 'Arial', sans-serif; 
                             display: flex; 
                             flex-direction: column; 
