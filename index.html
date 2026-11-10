@@ -1220,24 +1220,24 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                 const lessonHtml = doc.lesson ? `<div style="font-size:5.5pt; margin-bottom: 1mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; word-break: break-word;"><b>Bài:</b> ${doc.lesson}</div>` : '';
                 
-                // Nội dung gộp: Trái (Thông tin chiếm 50%) - Phải (QR chiếm 48% phóng to cực đại)
+                // Nội dung gộp: Bố cục 55% - 42% tương tự như hàm executePrint()
                 const content = `
-                    <div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: space-between; overflow: hidden;">
+                    <div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: space-between;">
                         <!-- Bên trái: Thông tin -->
-                        <div style="width: 50%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 0.5mm;">
+                        <div style="width: 55%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 1.5mm;">
                             <div style="font-weight:bold; font-size:6.5pt; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 0.5mm; text-align: center;">TÀI LIỆU</div>
                             <div style="font-size:6pt; margin-bottom: 1mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word;"><b>Tên:</b> ${doc.name}</div>
                             ${lessonHtml}
-                            <div style="font-size:6pt; margin-bottom: 1mm; line-height: 1.1;"><b>Mã:</b> <span style="font-family: monospace; font-weight:bold;">${doc.code}</span></div>
+                            <div style="font-size:6.5pt; margin-bottom: 1mm; line-height: 1.1;"><b>Mã:</b> <span style="font-family: monospace; font-weight:bold;">${doc.code}</span></div>
                             <div style="font-size:4.5pt; color: #555; margin-top: auto; font-style: italic;">In: ${timeStr}</div>
                         </div>
                         
                         <!-- Đường chia giữa -->
-                        <div style="width: 0px; height: 90%; border-left: 1px dashed #ccc;"></div>
+                        <div style="width: 0px; height: 90%; border-left: 1px dashed #aaa;"></div>
 
-                        <!-- Bên phải: Mã QR phóng to tối đa -->
-                        <div style="width: 48%; height: 100%; display: flex; align-items: center; justify-content: center;">
-                            <img src="${qrApiUrl}" style="height: 100%; width: 100%; object-fit: contain; transform: scale(1.15);">
+                        <!-- Bên phải: Mã QR theo tỷ lệ chuẩn -->
+                        <div style="width: 42%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-left: 1.5mm;">
+                            <img src="${qrApiUrl}" style="width: 100%; height: auto; max-height: 100%; object-fit: contain;">
                         </div>
                     </div>
                 `;
