@@ -1196,16 +1196,16 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 const w = 40, h = 30; // In kích thước tem nhỏ 40x30
                 const safeW = w - 2, safeH = h - 2;
 
-                // QR chứa TÊN TÚI để khi quét hiển thị đúng túi
-                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(bag.name)}&margin=0`;
+                // QR CHỈ chứa MÃ TÀI LIỆU
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(doc.code)}&margin=0`;
 
                 const lessonHtml = doc.lesson ? `<div style="font-size:5.5pt; margin-bottom: 1mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; word-break: break-word;"><b>Bài:</b> ${doc.lesson}</div>` : '';
                 
-                // Nội dung gộp: Trái (Thông tin) - Phải (QR cực to và căn giữa)
+                // Nội dung gộp: Trái (Thông tin) - Phải (QR căn sang phải)
                 const content = `
                     <div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: space-between;">
                         <!-- Bên trái: Thông tin -->
-                        <div style="width: 47%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 0.5mm; box-sizing: border-box;">
+                        <div style="width: 53%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding-right: 1mm;">
                             <div style="font-weight:bold; font-size:6.5pt; margin-bottom: 1.5mm; border-bottom: 1px dashed #333; padding-bottom: 0.5mm; text-align: center;">TÀI LIỆU</div>
                             <div style="font-size:6pt; margin-bottom: 1mm; line-height: 1.1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word;"><b>Tên:</b> ${doc.name}</div>
                             ${lessonHtml}
@@ -1216,9 +1216,9 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                         <!-- Đường chia giữa -->
                         <div style="width: 0px; height: 90%; border-left: 1px dashed #ccc;"></div>
 
-                        <!-- Bên phải: Mã QR to tối đa và căn giữa -->
-                        <div style="width: 51%; height: 100%; display: flex; align-items: center; justify-content: center; padding-left: 1mm; box-sizing: border-box;">
-                            <img src="${qrApiUrl}" style="width: 100%; height: 100%; object-fit: contain; transform: scale(1.1);">
+                        <!-- Bên phải: Mã QR dịch sang phải -->
+                        <div style="width: 44%; height: 100%; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; padding-left: 1.5mm;">
+                            <img src="${qrApiUrl}" style="width: 100%; height: auto; max-height: 100%; object-fit: contain; object-position: right center;">
                         </div>
                     </div>
                 `;
