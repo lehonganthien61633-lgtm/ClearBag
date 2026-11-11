@@ -70,16 +70,22 @@
                     </div>
                 </div>
             </div>
-
             <!-- Clearbags View -->
             <div id="view-clearbags" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-col h-full">
-                <div class="p-4 border-b border-gray-200 bg-gray-50 flex gap-2">
-                    <div class="relative w-full md:w-1/3 shrink-0">
+                <div class="p-4 border-b border-gray-200 bg-gray-50 flex flex-wrap gap-3 justify-between items-center shrink-0">
+                    <div class="relative w-full md:w-1/3 min-w-[200px]">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
                         <input type="text" id="searchInput" placeholder="Tìm tên, mã túi..." class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
                     </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <label class="text-gray-600 font-medium hidden sm:block">Hiển thị:</label>
+                        <select id="pageSize" onchange="app.changePageSize(this.value)" class="border border-gray-300 rounded-lg px-2 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="5">5 dòng</option>
+                            <option value="10" selected>10 dòng</option>
+                            <option value="15">15 dòng</option>
+                        </select>
+                    </div>
                 </div>
-                <!-- Sửa overflow-auto để cuộn bảng mượt trên mobile -->
                 <div class="overflow-auto flex-1">
                     <table class="w-full text-left whitespace-nowrap md:whitespace-normal">
                         <thead class="bg-gray-100 text-gray-600 text-xs md:text-sm uppercase tracking-wider sticky top-0 z-10 shadow-sm">
@@ -93,6 +99,14 @@
                         </thead>
                         <tbody id="tableBody" class="divide-y divide-gray-100 bg-white text-sm"></tbody>
                     </table>
+                </div>
+                <!-- Chân trang phân trang -->
+                <div class="p-3 border-t border-gray-200 bg-gray-50 flex justify-between items-center text-sm shrink-0">
+                    <span id="pageInfo" class="text-gray-600 font-medium">Đang tải...</span>
+                    <div class="flex gap-2">
+                        <button onclick="app.prevPage()" id="btnPrev" class="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button onclick="app.nextPage()" id="btnNext" class="w-8 h-8 flex items-center justify-center bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
                 </div>
             </div>
 
@@ -238,8 +252,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal Quét QR Kiểm Tra (Chỉ Camera) -->
+<!-- Modal Quét QR Kiểm Tra (Chỉ Camera) -->
     <div id="scanModal" class="fixed inset-0 bg-black/80 z-[70] hidden flex items-center justify-center p-3 md:p-4">
         <div class="bg-white rounded-xl shadow-2xl p-4 md:p-5 w-full max-w-sm flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center mb-3 border-b pb-2 shrink-0">
@@ -248,6 +261,11 @@
             </div>
             
             <div class="flex-1 space-y-3 overflow-y-auto no-scrollbar pb-2">
+                <!-- Nút chọn chế độ kiểm tra -->
+                <div class="flex gap-2 bg-gray-100 p-1 rounded-lg shrink-0">
+                    <button type="button" id="btnScanToday" onclick="app.setScanMode('today')" class="flex-1 py-1.5 text-sm font-bold bg-white shadow rounded text-blue-600 transition-all">Hôm nay</button>
+                    <button type="button" id="btnScanTomorrow" onclick="app.setScanMode('tomorrow')" class="flex-1 py-1.5 text-sm font-bold text-gray-500 rounded hover:bg-gray-200 transition-all">Ngày mai</button>
+                </div>
                 <p class="text-xs text-center text-gray-500">Đưa mã QR trên túi vào giữa khung hình.</p>
                 
                 <!-- Khu vực quét Camera tự co giãn trên mobile -->
@@ -317,6 +335,12 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 this.currentSchedules = []; 
                 this.currentScheduleIndex = 0;
                 this.currentPrintId = null;
+
+                // Biến phân trang
+                this.currentPage = 1;
+                this.itemsPerPage = 10;
+                // Biến mode quét (today / tomorrow)
+                this.scanMode = 'today';
                 
                 // Cấu hình Database
                 const firebaseConfig = { 
@@ -346,6 +370,7 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
 
                 document.getElementById('searchInput').addEventListener('input', (e) => {
                     this.search = e.target.value.toLowerCase();
+                    this.currentPage = 1; // Reset về trang 1 khi tìm kiếm
                     this.render();
                 });
 
@@ -500,63 +525,114 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                 return res;
             }
 
+            // --- CÁC HÀM XỬ LÝ PHÂN TRANG ---
+            changePageSize(size) {
+                this.itemsPerPage = parseInt(size);
+                this.currentPage = 1;
+                this.render();
+            }
+
+            prevPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    this.render();
+                }
+            }
+
+            nextPage() {
+                this.currentPage++;
+                this.render();
+            }
+
             render() {
                 const tbody = document.getElementById('tableBody');
                 tbody.innerHTML = '';
-                let totalBags = 0;
+                
+                // Cập nhật Dashboard
+                document.getElementById('stat-total').innerText = this.bags.length;
+                document.getElementById('stat-value').innerText = "N/A";
 
-                this.bags.forEach(bag => {
-                    totalBags++;
-                    if (bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search)) {
-                        const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Tài liệu</span>';
-                        
-                        let extraInfo = '';
-                        // Hiển thị lịch nếu là Môn học HOẶC (Tài liệu có lịch trình)
-                        if (bag.type === 'mon_hoc' || (bag.type === 'tai_lieu' && bag.schedules && bag.schedules.length > 0)) {
-                            let scheduleHtml = '';
-                            if(bag.schedules && Array.isArray(bag.schedules)) {
-                                scheduleHtml = bag.schedules.map(s => {
-                                    const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">T:${s.weeks}</span>` : '';
-                                    return `<div class="mt-0.5 flex items-center whitespace-nowrap"><i class="fa-regular fa-clock w-3 mr-1 text-gray-400"></i> ${s.day}, ${s.start}-${s.end} ${wInfo}</div>`;
-                                }).join('');
-                            }
-                            
-                            if (bag.type === 'mon_hoc') {
-                                const subCodeStr = bag.subSubjectCode ? `<span class="text-blue-500 text-[10px] font-bold ml-1">(+ ${bag.subSubjectCode})</span>` : '';
-                                extraInfo = `
-                                    <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
-                                        <div class="mb-1"><span class="font-bold text-gray-800">${bag.subjectCode}</span>${subCodeStr} <span class="bg-gray-200 px-1.5 py-0.5 rounded text-[10px] ml-1">HK: ${bag.semester}</span></div>
-                                        ${scheduleHtml}
-                                    </div>
-                                `;
-                            } else {
-                                extraInfo = `
-                                    <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
-                                        <div class="mb-1 font-bold text-gray-800 border-b pb-0.5">Lịch trình Tài liệu:</div>
-                                        ${scheduleHtml}
-                                    </div>
-                                `;
-                            }
+                // 1. Lọc dữ liệu theo search
+                const filteredBags = this.bags.filter(bag => 
+                    bag.name.toLowerCase().includes(this.search) || bag.code.toLowerCase().includes(this.search)
+                );
+
+                // 2. Xử lý phân trang
+                const totalItems = filteredBags.length;
+                const totalPages = Math.ceil(totalItems / this.itemsPerPage) || 1;
+                if (this.currentPage > totalPages) this.currentPage = totalPages;
+                
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = Math.min(startIndex + this.itemsPerPage, totalItems);
+                const paginatedBags = filteredBags.slice(startIndex, endIndex);
+
+                // Cập nhật UI phân trang
+                const btnPrev = document.getElementById('btnPrev');
+                const btnNext = document.getElementById('btnNext');
+                const pageInfo = document.getElementById('pageInfo');
+                
+                if (btnPrev && btnNext && pageInfo) {
+                    btnPrev.disabled = this.currentPage === 1;
+                    btnNext.disabled = this.currentPage === totalPages;
+                    pageInfo.innerText = totalItems === 0 ? "Không có kết quả" : `Hiển thị ${startIndex + 1}-${endIndex} / ${totalItems}`;
+                }
+
+                // Hàm helper highlight
+                const highlightText = (text, searchStr) => {
+                    if (!searchStr || !text) return text;
+                    const regex = new RegExp(`(${searchStr})`, 'gi');
+                    return String(text).replace(regex, `<mark class="bg-yellow-200 text-yellow-900 px-1 rounded-sm">$1</mark>`);
+                };
+
+                // 3. Render danh sách đã cắt
+                paginatedBags.forEach(bag => {
+                    const typeLabel = bag.type === 'mon_hoc' ? '<span class="bg-blue-100 text-blue-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Môn học</span>' : '<span class="bg-gray-200 text-gray-700 px-1.5 md:px-2 py-1 rounded text-[10px] md:text-xs font-bold">Tài liệu</span>';
+                    
+                    const displayCode = highlightText(bag.code, this.search);
+                    const displayName = highlightText(bag.name, this.search);
+
+                    let extraInfo = '';
+                    if (bag.type === 'mon_hoc' || (bag.type === 'tai_lieu' && bag.schedules && bag.schedules.length > 0)) {
+                        let scheduleHtml = '';
+                        if(bag.schedules && Array.isArray(bag.schedules)) {
+                            scheduleHtml = bag.schedules.map(s => {
+                                const wInfo = s.weeks ? `<span class="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded ml-1 border border-yellow-200">T:${s.weeks}</span>` : '';
+                                return `<div class="mt-0.5 flex items-center whitespace-nowrap"><i class="fa-regular fa-clock w-3 mr-1 text-gray-400"></i> ${s.day}, ${s.start}-${s.end} ${wInfo}</div>`;
+                            }).join('');
                         }
-
-                        tbody.innerHTML += `
-                            <tr class="hover:bg-gray-50 border-b">
-                                <td class="px-4 md:px-6 py-3 font-semibold text-blue-600 align-top">${bag.code}</td>
-                                <td class="px-4 md:px-6 py-3 align-top whitespace-nowrap">${typeLabel}</td>
-                                <td class="px-4 md:px-6 py-3 align-top font-bold text-blue-700 truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem chi tiết tài liệu" onclick="app.openBagDetails('${bag.id}')">${bag.name}</td>
-                                <td class="px-4 md:px-6 py-3 align-top min-w-[200px] hidden sm:table-cell">${extraInfo}</td>
-                                <td class="px-4 md:px-6 py-3 text-center align-top whitespace-nowrap">
-                                    <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 p-1.5 md:px-2 md:py-1 rounded mx-0.5" title="In nhãn"><i class="fa-solid fa-print"></i></button>
-                                    <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-0.5 md:mx-1 p-1.5" title="Sửa"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 mx-0.5 md:mx-1 p-1.5" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        `;
+                        
+                        if (bag.type === 'mon_hoc') {
+                            const subCodeStr = bag.subSubjectCode ? `<span class="text-blue-500 text-[10px] font-bold ml-1">(+ ${bag.subSubjectCode})</span>` : '';
+                            extraInfo = `
+                                <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                    <div class="mb-1"><span class="font-bold text-gray-800">${bag.subjectCode}</span>${subCodeStr} <span class="bg-gray-200 px-1.5 py-0.5 rounded text-[10px] ml-1">HK: ${bag.semester}</span></div>
+                                    ${scheduleHtml}
+                                </div>
+                            `;
+                        } else {
+                            extraInfo = `
+                                <div class="text-[11px] md:text-xs text-gray-600 mt-1 bg-gray-50 p-1.5 rounded border border-gray-100">
+                                    <div class="mb-1 font-bold text-gray-800 border-b pb-0.5">Lịch trình Tài liệu:</div>
+                                    ${scheduleHtml}
+                                </div>
+                            `;
+                        }
                     }
-                });
 
-                document.getElementById('stat-total').innerText = totalBags;
-                document.getElementById('stat-value').innerText = "N/A"; 
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50 border-b">
+                            <td class="px-4 md:px-6 py-3 font-semibold text-blue-600 align-top">${displayCode}</td>
+                            <td class="px-4 md:px-6 py-3 align-top whitespace-nowrap">${typeLabel}</td>
+                            <td class="px-4 md:px-6 py-3 align-top font-bold text-blue-700 truncate max-w-[150px] md:max-w-none cursor-pointer hover:underline" title="Bấm để xem chi tiết tài liệu" onclick="app.openBagDetails('${bag.id}')">${displayName}</td>
+                            <td class="px-4 md:px-6 py-3 align-top min-w-[200px] hidden sm:table-cell">${extraInfo}</td>
+                            <td class="px-4 md:px-6 py-3 text-center align-top whitespace-nowrap">
+                                <button onclick="app.openPrintModal('${bag.id}')" class="text-green-600 bg-green-50 hover:bg-green-100 p-1.5 md:px-2 md:py-1 rounded mx-0.5" title="In nhãn"><i class="fa-solid fa-print"></i></button>
+                                <button onclick="app.editBag('${bag.id}')" class="text-blue-500 mx-0.5 md:mx-1 p-1.5" title="Sửa"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="app.deleteBag('${bag.id}')" class="text-red-500 mx-0.5 md:mx-1 p-1.5" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
             }
 
             updateSemesterFilter() {
@@ -931,6 +1007,32 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     });
                 }
             }
+// --- CHUYỂN ĐỔI CHẾ ĐỘ QUÉT (HÔM NAY / NGÀY MAI) ---
+            setScanMode(mode) {
+                this.scanMode = mode;
+                if (mode === 'today') {
+                    document.getElementById('btnScanToday').className = "flex-1 py-1.5 text-sm font-bold bg-white shadow rounded text-blue-600 transition-all";
+                    document.getElementById('btnScanTomorrow').className = "flex-1 py-1.5 text-sm font-bold text-gray-500 rounded hover:bg-gray-200 transition-all";
+                } else {
+                    document.getElementById('btnScanTomorrow').className = "flex-1 py-1.5 text-sm font-bold bg-white shadow rounded text-blue-600 transition-all";
+                    document.getElementById('btnScanToday').className = "flex-1 py-1.5 text-sm font-bold text-gray-500 rounded hover:bg-gray-200 transition-all";
+                }
+                const resultBox = document.getElementById('scanResult');
+                resultBox.innerHTML = "Chờ quét mã...";
+                resultBox.className = "min-h-[70px] md:min-h-[90px] text-xs md:text-sm font-medium p-3 md:p-4 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 flex items-center justify-center transition-all duration-300";
+            }
+
+            getTargetDayInfo() {
+                const targetDate = new Date();
+                if (this.scanMode === 'tomorrow') {
+                    targetDate.setDate(targetDate.getDate() + 1);
+                }
+                const days = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+                return {
+                    dayString: days[targetDate.getDay()],
+                    weekNumber: this.getCurrentISOWeek(targetDate)
+                };
+            }
 
             checkBagForToday(bagCode) {
                 const cleanCode = bagCode.trim().toUpperCase();
@@ -956,31 +1058,33 @@ import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/
                     resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-red-100 text-red-700 border border-red-300 flex flex-col items-center justify-center text-center shadow-inner";
                     resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mb-1 text-2xl"></i> Không tìm thấy mã:<br><span class="font-mono text-lg mt-1">${cleanCode}</span>`;
                 } else if (foundDoc) {
-                    // Nếu là tài liệu
+                    // Nếu là tài liệu (Chỉ báo là thuộc túi nào, vì tài liệu phụ thuộc vào lịch của túi cha)
                     const lessonInfo = foundDoc.lesson ? `<br><span class="font-normal text-[11px]"><i class="fa-solid fa-book-open"></i> Bài: ${foundDoc.lesson}</span>` : '';
                     resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
-                    resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU<br><span class="text-base mt-1">${foundDoc.name}</span>${lessonInfo}<br><span class="text-xs text-gray-500 mt-1">Thuộc túi: ${foundBag.name}</span>`;
+                    resultBox.innerHTML = `<i class="fa-solid fa-file-lines mb-1 text-2xl"></i> TÀI LIỆU ĐƯỢC CHUẨN BỊ<br><span class="text-base mt-1">${foundDoc.name}</span>${lessonInfo}<br><span class="text-xs text-gray-500 mt-1">Thuộc túi: ${foundBag.name}</span>`;
                 } else {
-                    // Quét trúng Túi
-                    let isCorrectForToday = false;
-                    const currentWeek = this.getCurrentISOWeek();
-                    const currentDay = this.getCurrentDayString();
+                    // Quét trúng Túi - Tiến hành kiểm tra lịch
+                    let isCorrect = false;
+                    const targetInfo = this.getTargetDayInfo();
+                    const targetDay = targetInfo.dayString;
+                    const targetWeek = targetInfo.weekNumber;
+                    const modeLabel = this.scanMode === 'tomorrow' ? 'NGÀY MAI' : 'HÔM NAY';
                     
                     if (foundBag.type === 'mon_hoc' || (foundBag.type === 'tai_lieu' && foundBag.schedules && foundBag.schedules.length > 0)) {
                         for(let sch of foundBag.schedules) {
                             const validWeeks = this.parseWeeks(sch.weeks);
-                            if (sch.day === currentDay && validWeeks.includes(currentWeek)) {
-                                isCorrectForToday = true;
+                            if (sch.day === targetDay && validWeeks.includes(targetWeek)) {
+                                isCorrect = true;
                                 break;
                             }
                         }
 
-                        if (isCorrectForToday) {
+                        if (isCorrect) {
                             resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-green-100 text-green-800 border border-green-400 flex flex-col items-center justify-center text-center shadow-inner scale-105 transition-transform";
-                            resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH HÔM NAY<br><span class="text-base mt-1">${foundBag.name} ${foundBag.subjectCode ? '('+foundBag.subjectCode+')' : ''}</span>`;
+                            resultBox.innerHTML = `<i class="fa-solid fa-circle-check text-3xl mb-1"></i> ĐÚNG LỊCH ${modeLabel}<br><span class="text-base mt-1">${foundBag.name} ${foundBag.subjectCode ? '('+foundBag.subjectCode+')' : ''}</span>`;
                         } else {
                             resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-orange-100 text-orange-800 border border-orange-400 flex flex-col items-center justify-center text-center shadow-inner";
-                            resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH!<br><span class="font-normal text-xs mt-1">Túi này không có lịch vào ${currentDay} (Tuần ${currentWeek}).</span><br>${foundBag.name}`;
+                            resultBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-3xl mb-1"></i> SAI LỊCH ${modeLabel}!<br><span class="font-normal text-xs mt-1">Túi này không có lịch vào ${targetDay} (Tuần ${targetWeek}).</span><br>${foundBag.name}`;
                         }
                     } else {
                         resultBox.className = "min-h-[70px] md:min-h-[90px] text-sm font-bold p-3 md:p-4 rounded-lg bg-blue-100 text-blue-800 border border-blue-300 flex flex-col items-center justify-center text-center shadow-inner";
